@@ -1,0 +1,95 @@
+
+
+Compiled document containing information on how to run each command.
+
+
+======================================   RUN SIM   =========================================
+
+To run the sim and give the car ROS commands, run these 3 command line inputs in 3 different terminal windows:
+
+//launch teleop
+roslaunch mushr_sim teleop.launch
+
+//launch the sim display in rviz
+rosrun rviz rviz -d $HOME/catkin_ws/src/mushr/mushr_utils/rviz/default.rviz
+
+//launch the ROS car command
+roslaunch mushr_ros_intro path_publisher.launch
+
+  -
+
+// if you want to change which file is run, go to ~/catkin_ws/src/mushr_ros_intro/launch/path_publisher.launch and change the name of the .txt on the plan_file line (either straight_line.txt or figure_8.txt) 
+
+============================================================================================
+
+
+
+
+=======================================   TELEOP   =========================================
+
+//ssh into car:
+ssh -X robot@192.168.55.1
+
+//run the teleop
+roslaunch mushr_base teleop.launch
+
+============================================================================================
+
+
+
+
+=========================================   IP   ===========================================
+
+//IP of my windows:
+192.168.1.32
+
+//IP of car:
+192.168.55.1
+
+
+//set computer ip
+export ROS_IP=192.168.1.32
+
+//Set car IP
+export ROS_MASTER_URI=http://192.168.55.1:11311
+
+============================================================================================
+
+
+
+
+=======================================   CAMERA   =========================================
+
+//directory to get to camera
+cd ~/catkin_ws/src/mushr/mushr_hardware/realsense/realsense2_camera/launch/
+
+//launch realsense camera
+roslaunch rs_camera.launch
+
+============================================================================================
+
+
+
+
+====================================   ROS COMMANDS   ======================================
+
+//Get data for a given topic
+rostopic echo /car/vesc/commands/motor/speed
+
+//write to a topic - doesn't quite work and I am not sure why...
+//this is a publisher node? find a controller node to publish the message to such that it would eventually be routed to the wheel motor
+rostopic pub -1 /car/vesc/commands/motor/speed std_msgs/Float64 -- '-2000.0'
+
+
+  -  ROSPY  -
+
+//unnecessary? vv
+roscore
+
+//run the python file with ros packages
+rosrun ssi car_listener.py
+
+//print the information coming from a given topic
+rostopic echo /car/vesc/commands/motor/speed
+
+============================================================================================
