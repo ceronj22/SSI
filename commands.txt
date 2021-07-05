@@ -28,7 +28,7 @@ roslaunch mushr_ros_intro path_publisher.launch
 =======================================   TELEOP   =========================================
 
 //ssh into car:
-ssh -X robot@192.168.55.1
+ssh -X robot@<CAR IP>
 
 //run the teleop
 roslaunch mushr_base teleop.launch
@@ -41,17 +41,17 @@ roslaunch mushr_base teleop.launch
 =========================================   IP   ===========================================
 
 //IP of my windows:
-192.168.1.32
+<COMP IP>
 
 //IP of car:
-192.168.55.1
+<CAR IP>
 
 
 //set computer ip
-export ROS_IP=192.168.1.32
+export ROS_IP=<COMP IP>
 
 //Set car IP
-export ROS_MASTER_URI=http://192.168.55.1:11311
+export ROS_MASTER_URI=http://<CAR IP>:11311
 
 ============================================================================================
 
