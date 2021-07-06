@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 
-#7.1.2021
+#7.5.2021
 
 import rospy
-from std_msgs.msg import Float64, Bool
-import sensor_msgs.msg
+from std_msgs.msg import Float64, Bool #motor speed, wheel angle, pushbutton
+import sensor_msgs.msg #joystick
+
+
 
 import csv
 
 
 #2D list to store all the values in - start off with a header
-csv_data = [["Velocity", "Wheel Angle", "Push Button"]]
+csv_data = [["Velocity", "Wheel Angle", "Push Button Pressed"]]
 
 
 
@@ -36,7 +38,7 @@ hertz = 10
 #array to store motor speed vals before timer callback runs
 motor_speed_avg = []
 
-#get the data from the publisher and print to console
+#get the data from the publisher
 def motor_speed_callback(data):
 
     #only store the info if the square button is pressed:
@@ -51,13 +53,26 @@ def motor_speed_callback(data):
 #array to store wheel angle vals before timer callback runs
 wheel_angle_avg = []
 
-#get the data from the publisher and print to console
+#get the data from the publisher
 def wheel_angle_callback(data):
     
     #only store the info if the square button is pressed:
     if button_states[4] == 1:
         wheel_angle_avg.append(data.data)
 
+
+
+#is the push button pressed?
+global push_button_state
+push_button_state = False
+
+#get the data from the publisher
+def push_button_callback(data):
+    global push_button_state
+    
+    #only store the info if the square button is pressed (trivial here, but uniform):
+    if button_states[4] == 1:
+        push_button_state = data.data
 
 
 
@@ -85,12 +100,14 @@ def timer_callback(data):
     
     #don't try to append if there are no values
     if len(motor_speed_avg) > 0 and len(wheel_angle_avg) > 0:
-        #add motor speed to the to_append list
+        #add average motor speed to the to_append list
         to_append.append(sum(motor_speed_avg) / len(motor_speed_avg))
         
-        #add motor speed to the to_append list
+        #add average motor speed to the to_append list
         to_append.append(sum(wheel_angle_avg) / len(wheel_angle_avg))
-                
+        
+        #add push button state to the to_append list
+        to_append.append(push_button_state)
 
         #append all the vals to csv data
         csv_data.append(to_append)
@@ -126,6 +143,9 @@ def car_listener():
     
     #call the wheel angle callback
     rospy.Subscriber("/car/vesc/commands/servo/position", Float64, wheel_angle_callback)
+    
+    #call the push button callback
+    rospy.Subscriber("/car/push_button_state", Bool, push_button_callback)
 
     
     # spin() simply keeps python from exiting until this node is stopped
