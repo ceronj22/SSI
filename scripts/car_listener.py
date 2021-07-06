@@ -5,14 +5,15 @@
 import rospy
 from std_msgs.msg import Float64, Bool #motor speed, wheel angle, pushbutton
 import sensor_msgs.msg #joystick
-
+import geometry_msgs.msg
 
 
 import csv
 
 
+
 #2D list to store all the values in - start off with a header
-csv_data = [["Velocity", "Wheel Angle", "Push Button Pressed"]]
+csv_data = [["Velocity", "Wheel Angle", "Push Button Pressed", "X Pose", "Y Pose"]]
 
 
 
@@ -78,6 +79,23 @@ def push_button_callback(data):
 
 
 
+#average values for x position and y position
+x_pose_avg = []
+y_pose_avg = []
+
+def pose_callback(data): # docs.ros.org/en/noetic/api/geometry_msgs/html/msg/PoseStamped.html
+
+    #only store the info if the square button is pressed:
+    if button_states[4] == 1:
+        x_pose_avg.append(data.pose.position.x) #current x pose - universal for the duration of teleop
+        y_pose_avg.append(data.pose.position.y) #current y pose
+        #print('({}, {})'.format(x_pose_avg[-1], y_pose_avg[-1]))
+
+
+
+
+
+
 
 #get button vals from the teleop/joy topic
 def joy_callback(data):
@@ -99,7 +117,7 @@ def timer_callback(data):
     to_append = []
     
     #don't try to append if there are no values
-    if len(motor_speed_avg) > 0 and len(wheel_angle_avg) > 0:
+    if len(motor_speed_avg) > 0 and len(wheel_angle_avg) > 0 and len(x_pose_avg) > 0 and len(y_pose_avg) > 0:
         #add average motor speed to the to_append list
         to_append.append(sum(motor_speed_avg) / len(motor_speed_avg))
         
@@ -108,7 +126,13 @@ def timer_callback(data):
         
         #add push button state to the to_append list
         to_append.append(push_button_state)
-
+        
+        #add x and y pose to the to_append list
+        to_append.append(sum(x_pose_avg) / len(x_pose_avg))
+        to_append.append(sum(y_pose_avg) / len(y_pose_avg))
+        
+        
+        
         #append all the vals to csv data
         csv_data.append(to_append)
         
@@ -119,6 +143,8 @@ def timer_callback(data):
         #clear average arrays
         del motor_speed_avg[:]
         del wheel_angle_avg[:]
+        del x_pose_avg[:]
+        del y_pose_avg[:]
 
 
 
@@ -146,6 +172,9 @@ def car_listener():
     
     #call the push button callback
     rospy.Subscriber("/car/push_button_state", Bool, push_button_callback)
+
+    #call the pose callback
+    rospy.Subscriber("/car/car_pose", geometry_msgs.msg.PoseStamped, pose_callback)
 
     
     # spin() simply keeps python from exiting until this node is stopped
