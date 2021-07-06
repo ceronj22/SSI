@@ -1,19 +1,16 @@
 #!/usr/bin/env python
 
-#7.5.2021
+#7.1.2021
 
 import rospy
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Bool
 import sensor_msgs.msg
 
 import csv
 
 
-#Header to dictate values in each column
-cols = ["Velocity", "Wheel Angle"]
-
-#2D list to store all the values in
-csv_data = []
+#2D list to store all the values in - start off with a header
+csv_data = [["Velocity", "Wheel Angle", "Push Button"]]
 
 
 
@@ -23,68 +20,46 @@ button_states = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 
 
-#boolean flipped by timer callback - only pull data when true
-global get_data 
-get_data = False
-
 #how many times you want to pull info per second
 hertz = 10
 
 
 
 
+
+
+
+
+
+
+
+#array to store motor speed vals before timer callback runs
 motor_speed_avg = []
 
 #get the data from the publisher and print to console
 def motor_speed_callback(data):
-    global get_data 
-    
-    #rospy.loginfo(rospy.get_caller_id() + 'I heard %s', data.data)
-        
-    #print(button_states)
-    
+
     #only store the info if the square button is pressed:
     if button_states[4] == 1:
-        if get_data:
-            #add information to the data list
-            csv_data.append([sum(motor_speed_avg)/len(motor_speed_avg)])
-            
-            #print the data to console console
-            rospy.loginfo('I heard and stored %s, csv_data len: %s', csv_data[-1], len(csv_data))
-            
-            #make sure you wont get data until another 1/hertz seconds passes
-            #wheel angle is called after, so you only want to set get_data to salse once that passes
-            #get_data = False
-            
-            del motor_speed_avg[:]
-        else:
-            motor_speed_avg.append(data.data)
+        motor_speed_avg.append(data.data)
 
 
+
+
+
+
+#array to store wheel angle vals before timer callback runs
 wheel_angle_avg = []
 
 #get the data from the publisher and print to console
 def wheel_angle_callback(data):
-    global get_data
-    
-    #rospy.loginfo(rospy.get_caller_id() + 'I heard %s', data.data)
     
     #only store the info if the square button is pressed:
     if button_states[4] == 1:
-        if get_data:
-            #add information to the latest list within data
-            csv_data[-1].append(sum(wheel_angle_avg)/len(wheel_angle_avg))
-            
-            #print the data to console console
-            rospy.loginfo('I heard and stored %s, csv_data len: %s', csv_data[-1], len(csv_data))
-            
-            #make sure you wont get data until another 1/hertz seconds passes
-            get_data = False
-            
-            del wheel_angle_avg[:]
-        else:
-            #print("{} was just added to wheel_angle_avg".format(data.data))
-            wheel_angle_avg.append(data.data)
+        wheel_angle_avg.append(data.data)
+
+
+
 
 
 
@@ -98,17 +73,42 @@ def joy_callback(data):
 
 
 
-#run every 1/10 of a second and set get_data to true (so the motor speed can be added to data)
+
+
+
+
+
+#run every 1/10 of a second and add vals to csv_data
 def timer_callback(data):
-    global get_data
+    #temp list to store all the values we just got
+    to_append = []
     
-    #make sure there's stuff in the array before trying to append to the 2D csv_data array
+    #don't try to append if there are no values
     if len(motor_speed_avg) > 0 and len(wheel_angle_avg) > 0:
-        get_data = True
+        #add motor speed to the to_append list
+        to_append.append(sum(motor_speed_avg) / len(motor_speed_avg))
+        
+        #add motor speed to the to_append list
+        to_append.append(sum(wheel_angle_avg) / len(wheel_angle_avg))
+                
+
+        #append all the vals to csv data
+        csv_data.append(to_append)
+        
+        
+        rospy.loginfo('%s appended | csv_data len: %s', csv_data[-1], len(csv_data)-1)
+        
+        
+        #clear average arrays
+        del motor_speed_avg[:]
+        del wheel_angle_avg[:]
 
 
 
 
+
+
+#calls all the callbacks - single stream, but not necessarily in order
 def car_listener():
     
     rospy.init_node("car_listener", anonymous=True)
@@ -135,6 +135,8 @@ def car_listener():
 
 
 
+
+
 #takes collected data and writes it to the csv file in the same directory
 def write_to_csv():
     #open the file - cleaner than having to close seperately
@@ -142,8 +144,7 @@ def write_to_csv():
         #create a csv writer
         writer = csv.writer(file)
         
-        #add the header to the csv file for clarity
-        writer.writerow(cols)
+        print('csv_data: {}'.format(csv_data))
         
         #write all rows to that csv file
         writer.writerows(csv_data)
