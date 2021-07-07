@@ -12,6 +12,14 @@
   5) Run teleop ($ roslaunch mushr_base teleop.launch)
     -Make sure teleop is working and that the controller is connected
 
+
+    *If mushr_pl repo is now downloaded, refer to bottom of this document.
+    PF.1) In a new terminal, run this command: $ export ROS_MASTER_URI=http://<CAR IP>:11311
+
+    PF.2) In that same terminal, run this command: $ roslaunch mushr_pf real.launch
+         -This starts the particle filter and starts the pf publisher topics
+
+
   6) In a new terminal, run this command: $ export ROS_MASTER_URI=http://<CAR IP>:11311
 
   7) In that same terminal, (optionally) cd into the ssi scripts file using: $ cd ~/catkin_ws/src/ssi/scripts/
@@ -36,4 +44,3 @@
   3) Put that folder in ~/catkin_ws/src/
 
 ***That should get the particle filter set up, I'm still working on implementing it accurately into the code (I think the map is necessary to continue...)***
-
