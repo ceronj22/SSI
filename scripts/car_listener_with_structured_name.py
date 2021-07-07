@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 #7.7.2021
+print('hello')
 
 import rospy
 from std_msgs.msg import Float64, Bool #motor speed, wheel angle, pushbutton
@@ -12,7 +13,6 @@ import csv
 import string
 import random
 import os
-
 
 
 #2D list to store all the values in - start off with a header
@@ -241,19 +241,18 @@ def get_random_string(length):
     
     return to_ret
 
-APP_FOLDER = '/home/robot/catkin_ws/src/ssi/SSI-main/scripts/Data_Collection/'
-def get_structered_name():
-	totalFiles = 0
-	totalDir = 0
+app_folder = '/home/robot/catkin_ws/src/ssi/scripts/Data_Collection/'
+def get_structured_name():
+    totalFiles = 0
+    totalDir = 0
 	
-	for base, dirs, files in os.walk(APP_FOLDER):
-		print('Searching in : ', base)
-		for directories in dires:
-			totalDir += 1
-		for Files in files:
-			totalFiles += 1
+    for base, dirs, files in os.walk(app_folder):
+	for directories in dirs:
+	    totalDir += 1
+	for Files in files:
+	    totalFiles += 1
 	structured_name = 'test_run_{}'.format(totalFiles + 1)
-	return(structured_name)
+	return (structured_name)
 
 #takes collected data and writes it to the csv file in the same directory
 def write_to_csv():
@@ -261,11 +260,11 @@ def write_to_csv():
     name = get_structured_name()
     
     #open the file - cleaner than having to close seperately
-    with open(str(APP_FOLDER += name), 'w+') as file:
+    with open(str(app_folder + name), 'w+') as file:
         #create a csv writer
         writer = csv.writer(file)
         
-        #print('csv_data: {}'.format(csv_data))
+        print('csv_data: {}'.format(csv_data))
         
         #write all rows to that csv file
         writer.writerows(csv_data)
@@ -281,3 +280,4 @@ if __name__ == '__main__':
     print("Quit out of the listener.")
     
     write_to_csv()
+
