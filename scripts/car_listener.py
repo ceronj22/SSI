@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-#7.5.2021
+#7.7.2021
 
 import rospy
 from std_msgs.msg import Float64, Bool #motor speed, wheel angle, pushbutton
@@ -9,11 +9,13 @@ import geometry_msgs.msg
 
 
 import csv
+import string
+import random
 
 
 
 #2D list to store all the values in - start off with a header
-csv_data = [["Velocity", "Wheel Angle", "Push Button Pressed", "X Pose", "Y Pose"]]
+csv_data = [["Velocity", "Wheel Angle", "Push Button", "X Pose", "Y Pose", "Z Orien", "X PF", "Y PF", "Z Orien PF"]]
 
 
 
@@ -79,9 +81,12 @@ def push_button_callback(data):
 
 
 
-#average values for x position and y position
+#average values for x and y odom position
 x_pose_avg = []
 y_pose_avg = []
+
+#average values for z odom orientation
+z_orien_avg = []
 
 def pose_callback(data): # docs.ros.org/en/noetic/api/geometry_msgs/html/msg/PoseStamped.html
 
@@ -90,6 +95,29 @@ def pose_callback(data): # docs.ros.org/en/noetic/api/geometry_msgs/html/msg/Pos
         x_pose_avg.append(data.pose.position.x) #current x pose - universal for the duration of teleop
         y_pose_avg.append(data.pose.position.y) #current y pose
         #print('({}, {})'.format(x_pose_avg[-1], y_pose_avg[-1]))
+        
+        z_orien_avg.append(data.pose.orientation.z) #current z orientation
+
+
+
+
+
+#average values for x and y particle filter position
+x_pf_avg = []
+y_pf_avg = []
+
+#average values for z particle filter orientation
+zorien_pf_avg = []
+
+def pf_callback(data):
+    
+    #only store the info if the square button is pressed:
+    if button_states[4] == 1:
+        x_pf_avg.append(data.pose.position.x) #current x pose - based on map
+        y_pf_avg.append(data.pose.position.y) #current y pose
+        #print('PF: ({}, {})'.format(x_pf_avg[-1], y_pf_avg[-1]))
+        
+        zorien_pf_avg.append(data.pose.orientation.z) #current z orientation
 
 
 
@@ -117,7 +145,7 @@ def timer_callback(data):
     to_append = []
     
     #don't try to append if there are no values
-    if len(motor_speed_avg) > 0 and len(wheel_angle_avg) > 0 and len(x_pose_avg) > 0 and len(y_pose_avg) > 0:
+    if len(motor_speed_avg) > 0 and len(wheel_angle_avg) > 0 and len(x_pose_avg) > 0 and len(y_pose_avg) > 0 and len(z_orien_avg) and len(x_pf_avg) > 0 and len(y_pf_avg) > 0 and len(zorien_pf_avg) > 0:
         #add average motor speed to the to_append list
         to_append.append(sum(motor_speed_avg) / len(motor_speed_avg))
         
@@ -127,9 +155,21 @@ def timer_callback(data):
         #add push button state to the to_append list
         to_append.append(push_button_state)
         
+        
         #add x and y pose to the to_append list
         to_append.append(sum(x_pose_avg) / len(x_pose_avg))
         to_append.append(sum(y_pose_avg) / len(y_pose_avg))
+        
+        #add z orientation to the to_append list
+        to_append.append(sum(z_orien_avg) / len(z_orien_avg))
+        
+        
+        #add x and y pf to the to_append list
+        to_append.append(sum(x_pf_avg) / len(x_pf_avg))
+        to_append.append(sum(y_pf_avg) / len(y_pf_avg))
+        
+        #add z orientation to the to_append list
+        to_append.append(sum(zorien_pf_avg) / len(zorien_pf_avg))
         
         
         
@@ -145,6 +185,10 @@ def timer_callback(data):
         del wheel_angle_avg[:]
         del x_pose_avg[:]
         del y_pose_avg[:]
+        del z_orien_avg[:]
+        del x_pf_avg[:]
+        del y_pf_avg[:]
+        del zorien_pf_avg[:]
 
 
 
@@ -173,8 +217,12 @@ def car_listener():
     #call the push button callback
     rospy.Subscriber("/car/push_button_state", Bool, push_button_callback)
 
-    #call the pose callback
+    #call the pose callback - odom values
     rospy.Subscriber("/car/car_pose", geometry_msgs.msg.PoseStamped, pose_callback)
+
+
+    #call the particle filter callback
+    rospy.Subscriber("/car/particle_filter/inferred_pose", geometry_msgs.msg.PoseStamped, pf_callback)
 
     
     # spin() simply keeps python from exiting until this node is stopped
@@ -182,22 +230,32 @@ def car_listener():
 
 
 
-
-
+#returns a string of a given length
+def get_random_string(length):
+    #list of all lowercase letters
+    lowercases = string.ascii_lowercase
+    
+    #join together characters from the lowercase list length times
+    to_ret = "".join(random.choice(lowercases) for i in range(length))
+    
+    return to_ret
 
 
 #takes collected data and writes it to the csv file in the same directory
 def write_to_csv():
+    
+    rand_name = get_random_string(10) + ".csv"
+    
     #open the file - cleaner than having to close seperately
-    with open('test.csv', 'w+') as file:
+    with open(rand_name, 'w+') as file:
         #create a csv writer
         writer = csv.writer(file)
         
-        print('csv_data: {}'.format(csv_data))
+        #print('csv_data: {}'.format(csv_data))
         
         #write all rows to that csv file
         writer.writerows(csv_data)
-        print("Data saved to csv!")
+        print("Data saved to csv {}!".format(rand_name))
 
 
 
