@@ -257,7 +257,7 @@ def get_structured_name():
 #takes collected data and writes it to the csv file in the same directory
 def write_to_csv():
     
-    name = get_structured_name()
+    name = get_structured_name() + '.csv'
     
     #open the file - cleaner than having to close seperately
     with open(str(app_folder + name), 'w+') as file:
