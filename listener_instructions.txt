@@ -1,0 +1,39 @@
+
+***Instructions to use car_listener.py***
+
+  1) Download the entire github repo by clicking the green button labeled "Code" and then hitting download zip. Extract the zip and save the files to a folder named ssi.
+
+  2) Put that folder in ~/catkin_ws/src/
+
+  3) Connect to the same Wifi of the car (I tend to just use the Robot AP hotspot)
+
+  4) Open a terminal in the VM and ssh into car (I use: $ ssh -X robot@<CAR IP>)
+
+  5) Run teleop ($ roslaunch mushr_base teleop.launch)
+    -Make sure teleop is working and that the controller is connected
+
+  6) In a new terminal, run this command: $ export ROS_MASTER_URI=http://<CAR IP>:11311
+
+  7) In that same terminal, (optionally) cd into the ssi scripts file using: $ cd ~/catkin_ws/src/ssi/scripts/
+
+  8) In the same terminal, run the program by using the comman: rosrun ssi car_listener.py
+
+  9) If all goes well, you should see "Running main!" print to the terminal.
+    -Holding down L1 will begin to record inputs. Try moving the car around and see how the print changes
+
+  10) Once done, click on the terminal running car_listener.py and hit CTRL+C. This will quit out of the program, automatically saving to the csv file. The console should have something to the tune of "Data saved to csv!" printed on it.
+
+  11) In the scripts file should be a .csv that contains all of the data you just gathered.
+
+
+
+***Extra particle filter information is to be added. For now, follow these steps to download particle filter information***
+
+  1) Go to https://github.com/prl-mushr/mushr_pf
+
+  2) Download the repo and save to a folder named mushr_pl
+
+  3) Put that folder in ~/catkin_ws/src/
+
+***That should get the particle filter set up, I'm still working on implementing it accurately into the code (I think the map is necessary to continue...)***
+
