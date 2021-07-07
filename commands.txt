@@ -28,7 +28,7 @@ roslaunch mushr_ros_intro path_publisher.launch
 =======================================   TELEOP   =========================================
 
 //ssh into car:
-ssh -X robot@<CAR IP>
+ssh -X robot@192.168.55.1
 
 //run the teleop
 roslaunch mushr_base teleop.launch
@@ -41,17 +41,17 @@ roslaunch mushr_base teleop.launch
 =========================================   IP   ===========================================
 
 //IP of my windows:
-<COMP IP>
+192.168.1.32
 
 //IP of car:
-<CAR IP>
+192.168.55.1
 
 
 //set computer ip
-export ROS_IP=<COMP IP>
+export ROS_IP=192.168.1.32
 
 //Set car IP
-export ROS_MASTER_URI=http://<CAR IP>:11311
+export ROS_MASTER_URI=http://192.168.55.1:11311
 
 ============================================================================================
 
@@ -77,7 +77,7 @@ roslaunch rs_camera.launch
 rostopic echo /car/vesc/commands/motor/speed
 
 //write to a topic - doesn't quite work and I am not sure why...
-//this is a publisher node? find a controller node to publish the message to such that it would eventually be routed to the wheel motor - ***NOT WORKING***
+//this is a publisher node? find a controller node to publish the message to such that it would eventually be routed to the wheel motor
 rostopic pub -1 /car/vesc/commands/motor/speed std_msgs/Float64 -- '-2000.0'
 
 
@@ -91,5 +91,11 @@ rosrun ssi car_listener.py
 
 //print the information coming from a given topic
 rostopic echo /car/vesc/commands/motor/speed
+
+
+  - MUSHR PF -
+
+//run the particle filter - need to export to ros master uri first
+roslaunch mushr_pf real.launch
 
 ============================================================================================
