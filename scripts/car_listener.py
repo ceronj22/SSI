@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
-#7.7.2021
+#7.8.2021
+#Nick C.
+#Daniel Z.
 
 import rospy
 from std_msgs.msg import Float64, Bool #motor speed, wheel angle, pushbutton
@@ -142,10 +144,10 @@ def update_time():
     #add a tenth of a second to the seconds slot
     time[0] += 0.1
     
-    #if we hit 60s, then set seconds to 0 and add a minute
-    if time[0] == 60:
-        time[1] += 1
-        time[0] = 0
+    #if we go above 60 seconds, add every 60 to the number of minutes and mod to get remaining seconds
+    if time[0] >= 60.0:
+        time[1] += time[0] // 60
+        time[0] = time[0] % 60
 
 
 
@@ -196,15 +198,15 @@ def timer_callback(data):
         rospy.loginfo('%s appended | csv_data len: %s', csv_data[-1], len(csv_data)-1)
         
         
-        #clear average arrays
-        del motor_speed_avg[:]
-        del wheel_angle_avg[:]
-        del x_pose_avg[:]
-        del y_pose_avg[:]
-        del z_orien_avg[:]
-        del x_pf_avg[:]
-        del y_pf_avg[:]
-        del zorien_pf_avg[:]
+    #clear average arrays
+    del motor_speed_avg[:]
+    del wheel_angle_avg[:]
+    del x_pose_avg[:]
+    del y_pose_avg[:]
+    del z_orien_avg[:]
+    del x_pf_avg[:]
+    del y_pf_avg[:]
+    del zorien_pf_avg[:]
     
     
     #update the time at the end of the timer callback
