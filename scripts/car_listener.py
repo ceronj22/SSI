@@ -11,11 +11,12 @@ import geometry_msgs.msg
 import csv
 import string
 import random
+import os
 
 
 
 #2D list to store all the values in - start off with a header
-csv_data = [["Velocity", "Wheel Angle", "Push Button", "X Pose", "Y Pose", "Z Orien", "X PF", "Y PF", "Z Orien PF"]]
+csv_data = [["Time", "Velocity", "Wheel Angle", "Push Button", "X Pose", "Y Pose", "Z Orien", "X PF", "Y PF", "Z Orien PF"]]
 
 
 
@@ -29,7 +30,9 @@ button_states = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 hertz = 10
 
 
-
+#save the time. This is almost certainly not the best way to do this, but its the best way I could think of in the moment
+#      s  mins
+time = [0, 0]
 
 
 
@@ -134,18 +137,31 @@ def joy_callback(data):
 
 
 
-
-
+#updates the timestamp array
+def update_time():
+    #add a tenth of a second to the seconds slot
+    time[0] += 0.1
+    
+    #if we hit 60s, then set seconds to 0 and add a minute
+    if time[0] == 60:
+        time[1] += 1
+        time[0] = 0
 
 
 
 #run every 1/10 of a second and add vals to csv_data
 def timer_callback(data):
+    
     #temp list to store all the values we just got
     to_append = []
     
     #don't try to append if there are no values
     if len(motor_speed_avg) > 0 and len(wheel_angle_avg) > 0 and len(x_pose_avg) > 0 and len(y_pose_avg) > 0 and len(z_orien_avg) and len(x_pf_avg) > 0 and len(y_pf_avg) > 0 and len(zorien_pf_avg) > 0:
+        
+        #add the time first - min:s
+        to_append.append("{}:{}".format(time[1], time[0]))
+        
+        
         #add average motor speed to the to_append list
         to_append.append(sum(motor_speed_avg) / len(motor_speed_avg))
         
@@ -189,8 +205,10 @@ def timer_callback(data):
         del x_pf_avg[:]
         del y_pf_avg[:]
         del zorien_pf_avg[:]
-
-
+    
+    
+    #update the time at the end of the timer callback
+    update_time()
 
 
 
@@ -241,13 +259,29 @@ def get_random_string(length):
     return to_ret
 
 
+#gets a structured name based on number of files in the directory
+app_folder = '/home/robot/catkin_ws/src/ssi/scripts/Data_Collection/'
+def get_structured_name():
+    totalFiles = 0
+    totalDir = 0
+	
+    for base, dirs, files in os.walk(app_folder):
+	for directories in dirs:
+	    totalDir += 1
+	for Files in files:
+	    totalFiles += 1
+	structured_name = 'test_run_{}'.format(totalFiles + 1)
+	return (structured_name)
+
+
+
 #takes collected data and writes it to the csv file in the same directory
 def write_to_csv():
     
-    rand_name = get_random_string(10) + ".csv"
+    struc_name = get_structured_name() + ".csv"
     
     #open the file - cleaner than having to close seperately
-    with open(rand_name, 'w+') as file:
+    with open(str(app_folder + struc_name), 'w+') as file:
         #create a csv writer
         writer = csv.writer(file)
         
@@ -255,7 +289,7 @@ def write_to_csv():
         
         #write all rows to that csv file
         writer.writerows(csv_data)
-        print("Data saved to csv {}!".format(rand_name))
+        print("Data saved to csv {}!".format(struc_name))
 
 
 
