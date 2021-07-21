@@ -18,6 +18,9 @@ import os
 # Load MNIST
 mnist_data = datasets.MNIST(root="./data", train=True, download=True, transform=transforms.ToTensor())
 
+train_set, val_set = torch.utils.data.random_split(mnist_data, [50000, 10000])
+print("Train set length: {}\nValidation set length: {}".format(len(train_set), len(val_set)))
+
 # VARIABLES, WEIGHTS, AND FUNCTIONS
 
 # initialize some variables variables
@@ -28,8 +31,6 @@ hidden_dim = 128
 state_dim = 10
 z_dim = 2
 
-app_folder = "/Users/ceronj22/Desktop/"
-name = "weights"
 
 
 # Xavier Initialization - initialize weights with smaller numbers (less variance) based on the batch size to prevent gradient from exploding
@@ -257,10 +258,11 @@ net = cVAE()
 
 
 # =========================================== TRAINING ===========================================
+
 def train():
     # make load the data randomly into an interator
-    data_loader = torch.utils.data.DataLoader(dataset=mnist_data, batch_size=batch_size, shuffle=True)
-    data_iterator = iter(data_loader)
+    train_loader = torch.utils.data.DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True)
+    train_iterator = iter(train_loader)
 
     # define parameters for our torch optimizer
     op_parameters = net.parameters()
@@ -272,7 +274,7 @@ def train():
     prev_trained = 0 #len(origs)
 
     #number of times we want it to iterate
-    batches = 1250 #1250 batches = 1 Epoch (1250*48 = 60,000)
+    batches = len(train_set) // batch_size #1250 #1250 batches = 1 Epoch (1250*48 = 60,000)
 
     # this would all get looped quite a bit
     for i in range(batches):
@@ -283,10 +285,9 @@ def train():
         #    data_iterator = iter(data_loader)
 
         # pull input images
-        images, labs = data_iterator.next()  # pulls the next batch of data from the dataset (mnist)
+        images, labs = train_iterator.next()  # pulls the next batch of data from the dataset (mnist)
 
-        X = images.reshape(batch_size,
-                           input_dim)  # making images a tensor of dimension (batch_size, input_dim) (batch_size, 28*28)
+        X = images.reshape(batch_size, input_dim)  # making images a tensor of dimension (batch_size, input_dim) (batch_size, 28*28)
         s = to_one_hot(labs.reshape(batch_size, 1))  # reshape the labels
         # print(s[0])
 
@@ -297,7 +298,7 @@ def train():
         recons.append(X_hat)
         labels.append(labs)
 
-        print("Batch: {}\tLoss: {}".format(i + 1 + prev_trained, loss))
+        print("Training Batch: {}\tLoss: {}".format(i + prev_trained, loss))
         losses.append(float(loss))  # append it as a float so that we can put into matplotlib later
 
         # back prop weights
@@ -316,6 +317,41 @@ def train():
 
 
 
+# ========================================== VALIDATION ==========================================
+
+#Tests model against validation set. Returns mean of loss for each batch.
+def validate():
+    #save the losses
+    val_losses = []
+
+    # make load the data randomly into an interator
+    val_loader = torch.utils.data.DataLoader(dataset=val_set, batch_size=batch_size, shuffle=True)
+    val_iterator = iter(val_loader)
+
+
+    # number of times we want it to iterate
+    batches = len(val_set) // batch_size
+
+    # this would all get looped quite a bit
+    for i in range(batches):
+
+        images, labs = val_iterator.next()  # pulls the next batch of data from the dataset (mnist)
+
+        X = images.reshape(batch_size, input_dim)  # making images a tensor of dimension (batch_size, input_dim) (batch_size, 28*28)
+        s = to_one_hot(labs.reshape(batch_size, 1))  # reshape the labels
+
+        # run encoder and decoder using X and s and generate an X_hat
+        X_hat, loss = net.forward(X, s)
+
+        print("Validation Batch: {}\tLoss: {}".format(i, loss))
+        val_losses.append(float(loss)) # save it to validation losses
+
+        #don't backprop, just test the weights on val set
+
+
+    return np.mean(val_losses)
+
+# ========================================== VALIDATION ==========================================
 
 
 
@@ -323,6 +359,9 @@ def train():
 
 
 
+#folder & name of the checkpoint
+app_folder = "/Users/ceronj22/Desktop/"
+name = "weights"
 
 best_loss = 9999999 #safe bet for a really high starting loss
 curr_epoch = 0
@@ -342,18 +381,26 @@ else:
     print("No checkpoint file detected.")
 
 
+
+
+
 #how many times do we want to iterate through the whole dataset
-num_epochs = 5
+num_epochs = 20
 
 #train over many epochs and save the best models
 for i in range(curr_epoch, num_epochs):
     print("CURR EPOCH: {} -=- PREV BEST LOSS: {}".format(i, best_loss))
 
-    #train another epoch
+    #train an epoch
     train()
 
-    #if the result of this training is that the model is better than it was before, save the state
-    if losses[-1] < best_loss:
+
+    #validate the training and base whether or not to save the model off said validation
+    #curr_loss = losses[-1]
+    curr_loss = validate()
+
+    #if the result of this training is that the model is better when compared to validation data than it was before, save the state
+    if curr_loss < best_loss:
         print("Saving checkpoint...")
         #torch.save(net.state_dict(), str(app_folder + name))
 
@@ -361,13 +408,11 @@ for i in range(curr_epoch, num_epochs):
         torch.save({
             'model_state_dict': net.state_dict(),
             'epoch': i,
-            'loss': losses[-1]
+            'loss': curr_loss
         }, str(app_folder + name))
 
         print("Saved!")
 
-        best_loss = losses[-1]
+        best_loss = curr_loss
     else:
-        print("Model not saved; Loss of {} greater than Best Loss {}".format(losses[-1], best_loss))
-
-#check with validation set
+        print("Model not saved; Loss of {} greater than Best Loss {}".format(curr_loss, best_loss))
