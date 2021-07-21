@@ -1,7 +1,6 @@
 #Nick Cerone
 #7.21.21
 
-from torchvision import datasets, transforms
 import torch
 import torch.nn as nn
 from torch.nn import Parameter
