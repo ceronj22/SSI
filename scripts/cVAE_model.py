@@ -19,10 +19,10 @@ mnist_data = datasets.MNIST(root="./data", train=True, download=True, transform=
 train_set, val_set = torch.utils.data.random_split(mnist_data, [50000, 10000])
 print("Train set length: {}\nValidation set length: {}".format(len(train_set), len(val_set)))
 
+
 # VARIABLES, WEIGHTS, AND FUNCTIONS
 
-# initialize some variables variables
-
+# initialize some variables
 batch_size = 48
 input_dim = 28 * 28
 hidden_dim = 128
