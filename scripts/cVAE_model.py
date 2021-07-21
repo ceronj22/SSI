@@ -9,8 +9,6 @@ import torch.nn.functional as fn
 from torch.autograd import Variable
 import torch.optim as optim
 import numpy as np
-import matplotlib.pyplot as plt
-import csv
 import os
 
 # ======================================== SETUP AND VARS ========================================
@@ -362,6 +360,7 @@ def validate():
 #folder & name of the checkpoint
 app_folder = "/Users/ceronj22/Desktop/"
 name = "weights"
+
 
 best_loss = 9999999 #safe bet for a really high starting loss
 curr_epoch = 0
