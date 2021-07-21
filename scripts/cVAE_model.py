@@ -1,3 +1,6 @@
+#Nick Cerone
+#7.20.21
+
 from torchvision import datasets, transforms
 import torch
 import torch.nn as nn
@@ -77,6 +80,7 @@ class cVAE(nn.Module):
     def __init__(self):
         super().__init__()
 
+        #Setting weights and biases as module parameters()
         #Encoder
         self.weights_xh = xav_init(input_dim + state_dim, hidden_dim)
         self.weights_hZmu = xav_init(hidden_dim, z_dim)
@@ -265,18 +269,18 @@ def train():
     optimizer = optim.Adam(op_parameters, lr=learn_rate)
 
     # we can print out the total number of batches if we check the current length of arrays we've already saved values to
-    prev_trained = len(origs)
+    prev_trained = 0 #len(origs)
 
     #number of times we want it to iterate
-    batches = 1000
+    batches = 1250 #1250 batches = 1 Epoch (1250*48 = 60,000)
 
-    # this would all get looped auite a bit
+    # this would all get looped quite a bit
     for i in range(batches):
 
         # make sure we don't run out of images
-        if i * batch_size >= 60000 - batch_size:
-            data_loader = torch.utils.data.DataLoader(dataset=mnist_data, batch_size=batch_size, shuffle=True)
-            data_iterator = iter(data_loader)
+        #if i * batch_size >= 60000 - batch_size:
+        #    data_loader = torch.utils.data.DataLoader(dataset=mnist_data, batch_size=batch_size, shuffle=True)
+        #    data_iterator = iter(data_loader)
 
         # pull input images
         images, labs = data_iterator.next()  # pulls the next batch of data from the dataset (mnist)
@@ -309,21 +313,61 @@ def train():
 
 # =========================================== TRAINING ===========================================
 
+
+
+
+
+
+
+
+
+
+
+
+best_loss = 9999999 #safe bet for a really high starting loss
+curr_epoch = 0
+
 if os.path.exists(str(app_folder + name)):
-    net.load_state_dict(torch.load(str(app_folder + name)))
-    print("loading from file")
+    #net.load_state_dict(torch.load(str(app_folder + name)))
+
+    #load the old checkpoint
+    checkpoint = torch.load(str(app_folder + name))
+
+    net.load_state_dict(checkpoint['model_state_dict'])
+    curr_epoch = checkpoint['epoch'] + 1 #the previous epoch number is saved, so we have to increment
+    best_loss = checkpoint['loss']
+
+    print("Loading checkpoint from file...")
 else:
-    print("not loading from file")
+    print("No checkpoint file detected.")
 
 
+#how many times do we want to iterate through the whole dataset
+num_epochs = 5
 
-train()
+#train over many epochs and save the best models
+for i in range(curr_epoch, num_epochs):
+    print("CURR EPOCH: {} -=- PREV BEST LOSS: {}".format(i, best_loss))
 
-#for param in net.parameters():
-#    print(type(param), param.size())
+    #train another epoch
+    train()
 
-print("saving to file")
-torch.save(net.state_dict(), str(app_folder + name))
-print("saved!")
+    #if the result of this training is that the model is better than it was before, save the state
+    if losses[-1] < best_loss:
+        print("Saving checkpoint...")
+        #torch.save(net.state_dict(), str(app_folder + name))
 
-# Add everything to one cell
+        #save a checkpoit
+        torch.save({
+            'model_state_dict': net.state_dict(),
+            'epoch': i,
+            'loss': losses[-1]
+        }, str(app_folder + name))
+
+        print("Saved!")
+
+        best_loss = losses[-1]
+    else:
+        print("Model not saved; Loss of {} greater than Best Loss {}".format(losses[-1], best_loss))
+
+#check with validation set
