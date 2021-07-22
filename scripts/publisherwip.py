@@ -17,7 +17,7 @@ import geometry_msgs.msg
 from cvae.py import *
 
 button_states = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-joy_states = [0.0,0.0,0.0,0.0]
+joy_states = [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
 motor_speed = []
 wheel_angle = []
 hertz = 10
@@ -25,10 +25,12 @@ x_pf = 0
 y_pf = 0
 constant_z =(0,0)
 throttle = 0.0
+const_throttle = 1
 
 def joy_callback(data):
     button_states[:] = data.buttons[:]
     joy_states[:] = data.axes
+    throttle = joy_states[2]
 
 def motor_speed(data):
     motor_speed.append(data.data)
@@ -50,7 +52,7 @@ def cvae_action(z, state):
     return(cvae_action)
 
 def send_command()
-    drive = AckermanDrive(steering_angle= throttle * (cvae_action[0]), speed=throttle * (cvae_action[1]))   
+    drive = AckermanDrive(steering_angle= (cvae_action[0]), speed= const_throttle * (cvae_action[1]))   
 
 def conv_driver_space():
     #mutate pf space to driver space
