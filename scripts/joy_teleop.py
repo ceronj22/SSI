@@ -78,7 +78,7 @@ def conv_to_driver_space():
 def timer_callback(data):
     conv_driver_space()
     joy_to_latent()
-    cvae_output = cvae_to_action(net.P(constant_latent, s))
+    cvae_output = cvae_to_action(net.P(constant_z, s))
     send_command(pub_controls)
     
 def publisher():
