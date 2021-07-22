@@ -13,16 +13,6 @@ import urllib.request
 
 # ======================================== SETUP AND VARS ========================================
 
-#loading the npz file we'd saved before
-urllib.request.urlretrieve("https://github.com/ceronj22/SSI/raw/main/scripts/Nick_New_Data_Collection/nick_runs.npz", "nick_runs.npz")
-nick_runs = np.load("nick_runs.npz", allow_pickle=True)
-
-#training information - we have 11428 indices (on just nick runs)
-tot_actions = nick_runs["action"]
-tot_states = nick_runs["state"]
-tot_runs = [] #our dataset
-
-
 #convert each action param to fall within range [0,1] to pass through BCE
 def action_to_cvae(action):
   # Input range:
@@ -41,6 +31,21 @@ def cvae_to_action(cvae):
   ret[1] = (cvae[1] * 0.7) + 0.15
   return ret
 
+
+
+tot_runs = [] #our dataset
+
+# === Nick Runs ===
+
+#loading the npz file we'd saved before
+urllib.request.urlretrieve("https://github.com/ceronj22/SSI/raw/main/scripts/Nick_New_Data_Collection/nick_runs.npz", "nick_runs.npz")
+nick_runs = np.load("nick_runs.npz", allow_pickle=True)
+
+#training information - we have 11428 indices (on just nick runs)
+tot_actions = nick_runs["action"]
+tot_states = nick_runs["state"]
+
+
 #format the information for the data iterator - each row of train_runs represents one intsant - [[action], [state]]
 for i in range(len(tot_actions)):
   iact = torch.tensor(action_to_cvae(tot_actions[i]))
@@ -50,9 +55,36 @@ for i in range(len(tot_actions)):
 
 print(len(tot_runs)) #should be 11428 for just Nick's runs
 
+# === Nick Runs ===
 
-#split the total runs into trianing and validation - 85% train, 15% val
-train_runs, val_runs = torch.utils.data.random_split(tot_runs, [9714, 1714])
+
+
+
+# === Daniel Runs ===
+
+urllib.request.urlretrieve("https://github.com/ceronj22/SSI/raw/main/scripts/Daniel_Data_Collection_new/daniel_runs.npz", "daniel_runs.npz")
+daniel_runs = np.load("daniel_runs.npz", allow_pickle=True)
+
+#training information - we have 11428 indices (on just nick runs)
+tot_actions = daniel_runs["action"]
+tot_states = daniel_runs["state"]
+
+
+#format the information for the data iterator - each row of train_runs represents one intsant - [[action], [state]]
+for i in range(len(tot_actions)):
+  iact = torch.tensor(action_to_cvae(tot_actions[i]))
+  ist = torch.tensor(tot_states[i])
+
+  tot_runs.append([iact.type(torch.FloatTensor), ist.type(torch.FloatTensor)])
+
+print(len(tot_runs)) #should be 11428 + 9924 = 21352 for Nick's and Daniel's runs
+
+# === Daniel Runs ===
+
+
+
+#split the total runs randomly into training and validation - 85% train, 15% val
+train_runs, val_runs = torch.utils.data.random_split(tot_runs, [18149, 3203])
 
 
 
@@ -62,7 +94,7 @@ train_runs, val_runs = torch.utils.data.random_split(tot_runs, [9714, 1714])
 # initialize some variables
 batch_size = 64
 input_dim = 2 #Velocity, Wheel Angle
-hidden_dim = 2
+hidden_dim = 4
 state_dim = 3 #X Driver, Y Driver, Z Orien Driver
 z_dim = 2
 
@@ -259,22 +291,16 @@ def train():
     prev_trained = 0 #len(origs)
 
     #number of times we want it to iterate
-    batches = len(train_runs) // batch_size #1 Epoch = (11428/64 = ~178 batches)
+    batches = len(train_runs) // batch_size #1 Epoch = (18149/64 = ~283 batches)
 
     # this would all get looped quite a bit
     for i in range(batches):
-
-        # make sure we don't run out of images
-        #if i * batch_size >= 60000 - batch_size:
-        #    data_loader = torch.utils.data.DataLoader(dataset=mnist_data, batch_size=batch_size, shuffle=True)
-        #    data_iterator = iter(data_loader)
 
         # pull input images
         acts, stats = train_iterator.next()  # pulls the next batch of data from the dataset (mnist)
 
         X = acts.reshape(batch_size, input_dim)  # making images a tensor of dimension (batch_size, input_dim) (batch_size, 28*28)
         s = stats.reshape(batch_size, state_dim)  # reshape the labels
-        # print(s[0])
 
         # run encoder and decoder using X and s and generate an X_hat
         X_hat, loss = net.forward(X, s)
@@ -315,7 +341,7 @@ def validate():
 
 
     # number of times we want it to iterate
-    batches = len(val_runs) // batch_size
+    batches = len(val_runs) // batch_size #1 Epoch = (3203/64 = ~50 batches)
 
     # this would all get looped quite a bit
     for i in range(batches):
