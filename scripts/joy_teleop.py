@@ -54,11 +54,13 @@ turn_scale = 0.34
 #create a cVAE
 net = cVAE()
 
-app_folder = "/Users/ceronj22/Desktop/"
+app_folder = ""
 name = "mushr_cvae_weights"
 
 checkpoint = torch.load(str(app_folder + name))
 net.load_state_dict(checkpoint['model_state_dict'])
+
+
 
 
 
