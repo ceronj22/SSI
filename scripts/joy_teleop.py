@@ -22,7 +22,7 @@ from geometry_msgs.msg import (
     Quaternion, 
 ) 
 #cvae imports
-from mushr_cvae import *
+from mushr_cvae_stripped import *
 
 #joystick values
 joy_states = [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
@@ -54,7 +54,7 @@ turn_scale = 0.34
 #create a cVAE
 net = cVAE()
 
-app_folder = ""
+app_folder = "/home/robot/catkin_ws/src/mushr/mushr_base/mushr_base/src/"
 name = "mushr_cvae_weights"
 
 checkpoint = torch.load(str(app_folder + name))
