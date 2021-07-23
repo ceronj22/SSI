@@ -24,18 +24,34 @@ from geometry_msgs.msg import (
 #cvae imports
 from mushr_cvae import *
 
-button_states = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+#joystick values
 joy_states = [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
-motor_speed = []
-wheel_angle = []
 hertz = 10
-x_pf = 0
-y_pf = 0
-constant_z =(0,0)
+
+
+#average values for x and y particle filter position
+x_pf_avg = []
+y_pf_avg = []
+#average values for z particle filter orientation
+zorien_pf_avg = []
+
+
+
+#just a set z
+constant_z = torch.zeros(2)
+
+#our latent values
+latent_z = torch.zeros(2)
+s = torch.zeros(3)
+
 const_throttle = 1
 vel_scale = 0.5
 turn_scale = 0.34
 
+
+
+
+#create a cVAE
 net = cVAE()
 
 app_folder = "/Users/ceronj22/Desktop/"
@@ -45,49 +61,62 @@ checkpoint = torch.load(str(app_folder + name))
 net.load_state_dict(checkpoint['model_state_dict'])
 
 
-def joy_callback(data):
-    button_states[:] = data.buttons[:]
-    joy_states[:] = data.axes
-    
-def motor_speed(data):
-    motor_speed.append(data.data)
 
-def wheel_angle_callback(data):
-    wheel_angle.append(data.data)
-
-def joy_to_latent():
-    latent_z = (joy_states[0], joy_states[1])
-
+#pull particle filter values & append to average
 def pf_callback(data):
-    x_pf = data.pose.position.x
+    #convert to driver space
+    x_pf = -data.pose.position.x
     y_pf = data.pose.position.y
-    z_orien_pf = data.pose.orientation.z
-    s = (x_pf, y_pf, z_orien_pf)
+    z_orien_pf = data.pose.orientation.z + 0.5
+    
+    x_pf_avg.append(x_pf) #current x pose - based on map
+    y_pf_avg.append(y_pf) #current y pose
+    zorien_pf_avg.append(z_orien_pf) #current z orientation
+
+
+#scale the latent space for mapping
+latent_scale = 1
+#get joystick values
+def joy_callback(data):
+    joy_states[:] = data.axes[:]
+    latent_z[0] = joy_states[0] * latent_scale; latent_z[1] = joy_states[1] * latent_scale
+
+
    
-def send_command(pub_controls):
-    #drive = AckermannDrive(steering_angle= turn_scale * cvae_output[1], speed = vel_scale * (-joy_states[3] * cvae_output[0]))
+def send_command(pub_controls, cvae_output):
+    #drive = AckermannDrive(speed = vel_scale * cvae_output[0], steering_angle = turn_scale * cvae_output[1])
     #pub_controls.publish(AckermannDriveStamped(drive=drive))   
     
     drive = AckermannDrive(steering_angle= turn_scale * joy_states[0], speed = vel_scale * (-joy_states[3] * joy_states[1]))
-    pub_controls.publish(AckermannDriveStamped(drive=drive))  
-def conv_to_driver_space():
-    #mutate pf space to driver space
-    s[0] = -s[0]
-    s[2] =  s[2] + 1/2
+    pub_controls.publish(AckermannDriveStamped(drive=drive))
+
+
 
 def timer_callback(data):
-    conv_driver_space()
-    joy_to_latent()
-    cvae_output = cvae_to_action(net.P(constant_z, s))
-    send_command(pub_controls)
+    #make sure we have data
+    if len(x_pf_avg) > 0 and len(y_pf_avg) > 0 and len(zorien_pf_avg) > 0:
+        #get state
+        s[0] = sum(x_pose_avg) / len(x_pose_avg)
+        s[1] = sum(y_pose_avg) / len(y_pose_avg)
+        s[2] = sum(z_orien_avg) / len(z_orien_avg)
+        
+        cvae_output = cvae_to_action(net.P(constant_z, s))
+        send_command(pub_controls, cvae_output)
+        
+    
+    del x_pf_avg[:]
+    del y_pf_avg[:]
+    del zorien_pf_avg[:] 
+
+
     
 def publisher():
     rospy.init_node("publisher", anonymous=True)
     rospy.Subscriber("/car/teleop/joy", sensor_msgs.msg.Joy, joy_callback)
     # particle filter
-    #rospy.Subscriber("/car/particle_filter/inferred_pose", geometry_msgs.msg.PoseStamped, pf_callback)
-    # odometry pos
-    #rospy.Subscriber("/car/car_pose", geometry_msgs.msg.PoseStamped, pf_callback)
+    rospy.Subscriber("/car/particle_filter/inferred_pose", geometry_msgs.msg.PoseStamped, pf_callback)
+    
+    #call the timer callback every 1/hertz (1/10) second
     rospy.Timer(rospy.Duration(1.0 / hertz), timer_callback)
     rospy.spin()
 
