@@ -67,8 +67,8 @@ net.load_state_dict(checkpoint['model_state_dict'])
 #pull particle filter values & append to average
 def pf_callback(data):
     #convert to driver space
-    x_pf = -data.pose.position.x
-    y_pf = data.pose.position.y
+    x_pf = -data.pose.position.y
+    y_pf = data.pose.position.x
     z_orien_pf = data.pose.orientation.z + 0.5
     
     x_pf_avg.append(x_pf) #current x pose - based on map
