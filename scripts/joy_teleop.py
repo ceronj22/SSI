@@ -40,6 +40,8 @@ zorien_pf_avg = []
 
 #just a set z
 constant_z = torch.zeros(2).reshape(1, 2)
+#if you want to alter that constant z...
+constant_z[0][0] = 0; constant_z[0][1] = 0
 
 #our latent values
 latent_z = torch.zeros(2).reshape(1, 2)
