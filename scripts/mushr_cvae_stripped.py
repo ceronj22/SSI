@@ -24,6 +24,9 @@ def action_to_cvae(action):
 
 #convert each cVAE output on range [0,1] to interpretable actions
 def cvae_to_action(cvae):
+  #make it 1D
+  cvae = cvae.detach().numpy().flatten()
+
   ret = np.zeros(cvae.shape)
   ret[0] = (cvae[0] * 6500.0) - 3250.0
   ret[1] = (cvae[1] * 0.7) + 0.15
