@@ -48,7 +48,7 @@ latent_z = torch.zeros(2).reshape(1, 2)
 s = torch.zeros(3).reshape(1, 3)
 
 const_throttle = 1
-vel_scale = 0.5
+vel_scale = 1 #0.5
 turn_scale = 1 #0.34
 
 
