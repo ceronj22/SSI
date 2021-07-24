@@ -26,7 +26,7 @@ from geometry_msgs.msg import (
 from mushr_cvae_stripped import *
 
 #joystick values
-joy_states = [0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0]
+joy_states = [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
 hertz = 10
 
 
@@ -90,7 +90,8 @@ def joy_callback(data):
 
    
 def send_command(pub_controls, cvae_output):
-    drive = AckermannDrive(speed = vel_scale * cvae_output[0] * joy_states[3], steering_angle = turn_scale * cvae_output[1])
+    #cVAE output interprets negative as driving forward, but publisher does opposite --- cVAE output interprets 0.5 as centered WA, but publisher says 0.0 is centered
+    drive = AckermannDrive(speed = vel_scale * -cvae_output[0] * joy_states[3], steering_angle = turn_scale * cvae_output[1] - 0.5)
     print(cvae_output)
     print(joy_states[3])
 
