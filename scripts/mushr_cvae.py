@@ -10,6 +10,7 @@ import torch.optim as optim
 import numpy as np
 import os
 import urllib.request
+import matplotlib.pyplot as plt
 
 # ======================================== SETUP AND VARS ========================================
 
@@ -399,10 +400,13 @@ else:
 
 
 
+#losses against validation set to plot
+validated_losses = []
+best_losses = []
 
 
 #how many times do we want to iterate through the whole dataset
-num_epochs = 200
+num_epochs = 1000
 
 
 #train over many epochs and save the best models
@@ -434,3 +438,22 @@ for i in range(curr_epoch, num_epochs):
         best_loss = curr_loss
     else:
         print("Model not saved; Loss of {} worse than Best Loss {}".format(curr_loss, best_loss))
+
+    #save the losses per epoch to plot later
+    validated_losses.append(curr_loss)
+    best_losses.append(best_loss)
+
+
+
+#makes a plot of current validation loss to best validation loss for each epoch
+def plot_losses():
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title("Loss Over {} Epochs".format(len(validated_losses)))
+
+    plt.plot(range(len(best_losses)), best_losses, 'r')
+    plt.plot(range(len(validated_losses)), validated_losses, 'b')
+
+    plt.show()
+
+plot_losses()
