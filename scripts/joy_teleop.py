@@ -138,7 +138,5 @@ if __name__ == "__main__":
     init_pose_topic = rospy.get_param("~init_pose_topic", "/initialpose") 
     pub_init_pose = rospy.Publisher(init_pose_topic, PoseWithCovarianceStamped, queue_size=1) 
  
-
- 
     publisher()
     print("Quit CVAE Assisted Teleop")
