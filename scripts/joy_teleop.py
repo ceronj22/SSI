@@ -81,7 +81,7 @@ def pf_callback(data):
 
 
 #scale the latent space for mapping
-latent_scale = 1
+latent_scale = 2.5
 #get joystick values
 def joy_callback(data):
     joy_states[:] = data.axes[:]
