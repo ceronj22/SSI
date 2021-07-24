@@ -1,5 +1,5 @@
 #Nick Cerone
-#7.21.21
+#7.24.21
 
 import torch
 import torch.nn as nn
@@ -14,10 +14,10 @@ import numpy as np
 #convert each action param to fall within range [0,1] to pass through BCE
 def action_to_cvae(action):
   # Input range:
-  # Column 0: Velocity, [-3250, 3250]
+  # Column 0: Velocity, --[-3250, 3250]-- #EDIT: [-1750, 0]
   # Column 1: Steering Angle, [.15, .85]
   ret = np.zeros(action.shape)
-  ret[0] = (action[0] + 3250.0) / 6500.0
+  ret[0] = action[0] / -1750.0
   ret[1] = (action[1] - 0.15) / 0.7
   return ret
 
@@ -28,7 +28,7 @@ def cvae_to_action(cvae):
   cvae = cvae.detach().numpy().flatten()
 
   ret = np.zeros(cvae.shape)
-  ret[0] = (cvae[0] * 6500.0) - 3250.0
+  ret[0] = cvae[0] * -1750.0
   ret[1] = (cvae[1] * 0.7) + 0.15
   return ret
 
