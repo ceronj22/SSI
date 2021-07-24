@@ -1,5 +1,5 @@
 #Nick Cerone
-#7.21.21
+#7.24.21
 
 import torch
 import torch.nn as nn
@@ -16,10 +16,10 @@ import urllib.request
 #convert each action param to fall within range [0,1] to pass through BCE
 def action_to_cvae(action):
   # Input range:
-  # Column 0: Velocity, [-3250, 3250]
+  # Column 0: Velocity, --[-3250, 3250]-- #EDIT: [-1750, 0]
   # Column 1: Steering Angle, [.15, .85]
   ret = np.zeros(action.shape)
-  ret[0] = (action[0] + 3250.0) / 6500.0
+  ret[0] = action[0] / -1750.0
   ret[1] = (action[1] - 0.15) / 0.7
   return ret
 
@@ -27,19 +27,19 @@ def action_to_cvae(action):
 #convert each cVAE output on range [0,1] to interpretable actions
 def cvae_to_action(cvae):
   ret = np.zeros(cvae.shape)
-  ret[0] = (cvae[0] * 6500.0) - 3250.0
+  ret[0] = cvae[0] * -1750.0
   ret[1] = (cvae[1] * 0.7) + 0.15
   return ret
 
 
 
-tot_runs = [] #our dataset
+tot_runs = [] #our entire dataset
 
 # === Nick Runs ===
 
-#loading the npz file we'd saved before
-urllib.request.urlretrieve("https://github.com/ceronj22/SSI/raw/main/scripts/Nick_New_Data_Collection/nick_runs.npz", "nick_runs.npz")
-nick_runs = np.load("nick_runs.npz", allow_pickle=True)
+#loading the npz file we'd saved before #EDIT: ~NEW~ runs no longer have flipped runs, nor do they have values which go backwards
+urllib.request.urlretrieve("https://github.com/ceronj22/SSI/raw/main/scripts/Nick_New_Data_Collection/nick_runs_new.npz", "nick_runs_new.npz")
+nick_runs = np.load("nick_runs_new.npz", allow_pickle=True)
 
 #training information - we have 11428 indices (on just nick runs)
 tot_actions = nick_runs["action"]
@@ -53,7 +53,8 @@ for i in range(len(tot_actions)):
 
   tot_runs.append([iact.type(torch.FloatTensor), ist.type(torch.FloatTensor)])
 
-print(len(tot_runs)) #should be 11428 for just Nick's runs
+#print(len(tot_runs)) #should be 11428 for just Nick's runs
+print("Nick Sliced Runs: {}".format(len(tot_runs))) #NEW - 5714
 
 # === Nick Runs ===
 
@@ -62,8 +63,8 @@ print(len(tot_runs)) #should be 11428 for just Nick's runs
 
 # === Daniel Runs ===
 
-urllib.request.urlretrieve("https://github.com/ceronj22/SSI/raw/main/scripts/Daniel_Data_Collection_new/daniel_runs.npz", "daniel_runs.npz")
-daniel_runs = np.load("daniel_runs.npz", allow_pickle=True)
+urllib.request.urlretrieve("https://github.com/ceronj22/SSI/raw/main/scripts/Daniel_Data_Collection_new/daniel_runs_new.npz", "daniel_runs_new.npz")
+daniel_runs = np.load("daniel_runs_new.npz", allow_pickle=True)
 
 #training information - we have 11428 indices (on just nick runs)
 tot_actions = daniel_runs["action"]
@@ -77,14 +78,15 @@ for i in range(len(tot_actions)):
 
   tot_runs.append([iact.type(torch.FloatTensor), ist.type(torch.FloatTensor)])
 
-print(len(tot_runs)) #should be 11428 + 9924 = 21352 for Nick's and Daniel's runs
+#print(len(tot_runs)) #should be 11428 + 9924 = 21352 for Nick's and Daniel's runs
+print("Total Sliced Runs: {}".format(len(tot_runs))) #NEW - 4842 + 5714 = 10556
 
 # === Daniel Runs ===
 
 
 
 #split the total runs randomly into training and validation - 85% train, 15% val
-train_runs, val_runs = torch.utils.data.random_split(tot_runs, [18149, 3203])
+train_runs, val_runs = torch.utils.data.random_split(tot_runs, [8972, 1584])
 
 
 
@@ -400,7 +402,8 @@ else:
 
 
 #how many times do we want to iterate through the whole dataset
-num_epochs = 100
+num_epochs = 200
+
 
 #train over many epochs and save the best models
 for i in range(curr_epoch, num_epochs):
@@ -424,7 +427,7 @@ for i in range(curr_epoch, num_epochs):
             'model_state_dict': net.state_dict(),
             'epoch': i,
             'loss': curr_loss
-        }, str(app_folder + name))
+        }, str(app_folder + name), _use_new_zipfile_serialization=False)
 
         print("Saved!")
 
