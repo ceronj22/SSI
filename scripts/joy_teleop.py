@@ -21,11 +21,12 @@ from geometry_msgs.msg import (
     PoseWithCovarianceStamped, 
     Quaternion, 
 ) 
+
 #cvae imports
 from mushr_cvae_stripped import *
 
 #joystick values
-joy_states = [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
+joy_states = [0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0]
 hertz = 10
 
 
@@ -38,15 +39,15 @@ zorien_pf_avg = []
 
 
 #just a set z
-constant_z = torch.zeros(2)
+constant_z = torch.zeros(2).reshape(1, 2)
 
 #our latent values
-latent_z = torch.zeros(2)
-s = torch.zeros(3)
+latent_z = torch.zeros(2).reshape(1, 2)
+s = torch.zeros(3).reshape(1, 3)
 
 const_throttle = 1
 vel_scale = 0.5
-turn_scale = 0.34
+turn_scale = 1 #0.34
 
 
 
@@ -81,15 +82,19 @@ latent_scale = 1
 #get joystick values
 def joy_callback(data):
     joy_states[:] = data.axes[:]
-    latent_z[0] = joy_states[0] * latent_scale; latent_z[1] = joy_states[1] * latent_scale
+
+    joy_states[3] = (joy_states[3] - 1) * -0.5
+
+    latent_z[0][0] = joy_states[0] * latent_scale; latent_z[0][1] = joy_states[1] * latent_scale
 
 
    
 def send_command(pub_controls, cvae_output):
-    #drive = AckermannDrive(speed = vel_scale * cvae_output[0], steering_angle = turn_scale * cvae_output[1])
-    #pub_controls.publish(AckermannDriveStamped(drive=drive))   
-    
-    drive = AckermannDrive(steering_angle= turn_scale * joy_states[0], speed = vel_scale * (-joy_states[3] * joy_states[1]))
+    drive = AckermannDrive(speed = vel_scale * cvae_output[0] * joy_states[3], steering_angle = turn_scale * cvae_output[1])
+    print(cvae_output)
+    print(joy_states[3])
+
+    #drive = AckermannDrive(steering_angle= turn_scale * joy_states[0], speed = vel_scale * (-joy_states[3] * joy_states[1]))
     pub_controls.publish(AckermannDriveStamped(drive=drive))
 
 
@@ -98,13 +103,14 @@ def timer_callback(data):
     #make sure we have data
     if len(x_pf_avg) > 0 and len(y_pf_avg) > 0 and len(zorien_pf_avg) > 0:
         #get state
-        s[0] = sum(x_pose_avg) / len(x_pose_avg)
-        s[1] = sum(y_pose_avg) / len(y_pose_avg)
-        s[2] = sum(z_orien_avg) / len(z_orien_avg)
+        s[0][0] = sum(x_pf_avg) / len(x_pf_avg)
+        s[0][1] = sum(y_pf_avg) / len(y_pf_avg)
+        s[0][2] = sum(zorien_pf_avg) / len(zorien_pf_avg)
         
         cvae_output = cvae_to_action(net.P(constant_z, s))
         send_command(pub_controls, cvae_output)
-        
+    #else:
+    #    send_command(pub_controls, None)
     
     del x_pf_avg[:]
     del y_pf_avg[:]
@@ -136,6 +142,3 @@ if __name__ == "__main__":
  
     publisher()
     print("Quit CVAE Assisted Teleop")
- 
-    
-
