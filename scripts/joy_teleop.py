@@ -45,7 +45,7 @@ constant_z[0][0] = 0
 constant_z[0][1] = 0
 
 #our latent values
-latent_z = torch.zeros(2).reshape(1, 2)
+latent_z = torch.zeros(1).reshape(1, 1)
 s = torch.zeros(3).reshape(1, 3)
 
 const_throttle = 1
@@ -88,7 +88,7 @@ def joy_callback(data):
 
     joy_states[3] = (joy_states[3] - 1) * -0.5
 
-    latent_z[0][0] = joy_states[0] * latent_scale; latent_z[0][1] = joy_states[1] * latent_scale
+    latent_z[0][0] = joy_states[0] * latent_scale; #latent_z[0][1] = joy_states[1] * latent_scale
 
 
    
