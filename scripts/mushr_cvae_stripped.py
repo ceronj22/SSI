@@ -40,7 +40,7 @@ input_dim = 2 #Velocity, Wheel Angle
 hidden_dim1 = 4
 hidden_dim2 = 3
 state_dim = 3 #X Driver, Y Driver, Z Orien Driver
-z_dim = 2
+z_dim = 1
 
 
 
@@ -97,7 +97,7 @@ class cVAE(nn.Module):
 
     # Decoder function
     
-     def P(self, z, s):
+    def P(self, z, s):
         # concatonate over the labels
         z_prime = torch.cat([z, s], 1)
 
