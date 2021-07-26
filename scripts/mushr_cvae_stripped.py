@@ -1,5 +1,5 @@
 #Nick Cerone
-#7.25.21
+#7.26.21
 
 import torch
 import torch.nn as nn
@@ -38,10 +38,10 @@ def cvae_to_action(cvae):
 batch_size = 64
 input_dim = 2 #Velocity, Wheel Angle
 state_dim = 3 #X Driver, Y Driver, Z Orien Driver
-hidden_dim1 = 4
-hidden_dim2 = 3
-hidden_dim3 = 2
-z_dim = 1
+hidden_dim1 = 5
+hidden_dim2 = 4
+hidden_dim3 = 3
+z_dim = 2
 
 
 
