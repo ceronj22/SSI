@@ -39,10 +39,8 @@ batch_size = 64
 input_dim = 2 #Velocity, Wheel Angle
 state_dim = 3 #X Driver, Y Driver, Z Orien Driver
 hidden_dim1 = 4
-hidden_dim2 = 4
-hidden_dim3 = 4
-hidden_dim4 = 4
-hidden_dim5 = 4
+hidden_dim2 = 3
+hidden_dim3 = 2
 z_dim = 1
 
 
@@ -74,31 +72,23 @@ class cVAE(nn.Module):
         self.weights_xh1 = xav_init(input_dim + state_dim, hidden_dim1)
         self.weights_h1h2 = xav_init(hidden_dim1, hidden_dim2)
         self.weights_h2h3 = xav_init(hidden_dim2, hidden_dim3)
-        self.weights_h3h4 = xav_init(hidden_dim3, hidden_dim4)
-        self.weights_h4h5 = xav_init(hidden_dim4, hidden_dim5)
-        self.weights_h5Zmu = xav_init(hidden_dim5, z_dim)
-        self.weights_h5Zsig = xav_init(hidden_dim5, z_dim)
+        self.weights_h3Zmu = xav_init(hidden_dim3, z_dim)
+        self.weights_h3Zsig = xav_init(hidden_dim3, z_dim)
 
         self.biases_xh1 = Parameter(torch.zeros(hidden_dim1), requires_grad=True)
         self.biases_h1h2 = Parameter(torch.zeros(hidden_dim2), requires_grad=True)
         self.biases_h2h3 = Parameter(torch.zeros(hidden_dim3), requires_grad=True)
-        self.biases_h3h4 = Parameter(torch.zeros(hidden_dim4), requires_grad=True)
-        self.biases_h4h5 = Parameter(torch.zeros(hidden_dim5), requires_grad=True)
-        self.biases_h5Zmu = Parameter(torch.zeros(z_dim), requires_grad=True)
-        self.biases_h5Zsig = Parameter(torch.zeros(z_dim), requires_grad=True)
+        self.biases_h3Zmu = Parameter(torch.zeros(z_dim), requires_grad=True)
+        self.biases_h3Zsig = Parameter(torch.zeros(z_dim), requires_grad=True)
 
 
         #Decoder
-        self.weights_zh5 = xav_init(z_dim + state_dim, hidden_dim5)
-        self.weights_h5h4 = xav_init(hidden_dim5, hidden_dim4)
-        self.weights_h4h3 = xav_init(hidden_dim4, hidden_dim3)
+        self.weights_zh3 = xav_init(z_dim + state_dim, hidden_dim3)
         self.weights_h3h2 = xav_init(hidden_dim3, hidden_dim2)
         self.weights_h2h1 = xav_init(hidden_dim2, hidden_dim1)
         self.weights_h1xhat = xav_init(hidden_dim1, input_dim)
 
-        self.biases_zh5 = Parameter(torch.zeros(hidden_dim5), requires_grad=True)
-        self.biases_h5h4 = Parameter(torch.zeros(hidden_dim4), requires_grad=True)
-        self.biases_h4h3 = Parameter(torch.zeros(hidden_dim3), requires_grad=True)
+        self.biases_zh3 = Parameter(torch.zeros(hidden_dim3), requires_grad=True)
         self.biases_h3h2 = Parameter(torch.zeros(hidden_dim2), requires_grad=True)
         self.biases_h2h1 = Parameter(torch.zeros(hidden_dim1), requires_grad=True)
         self.biases_h1xhat = Parameter(torch.zeros(input_dim), requires_grad=True)
@@ -118,9 +108,7 @@ class cVAE(nn.Module):
         z_prime = torch.cat([z, s], 1)
 
         # do more dot products to reconstruct the matrix now
-        p_hidden5 = torch.relu(torch.matmul(z_prime, self.weights_zh5) + self.biases_zh5.repeat(z_prime.size(0), 1))
-        p_hidden4 = torch.matmul(p_hidden5, self.weights_h5h4) + self.biases_h5h4.repeat(p_hidden5.size(0), 1)
-        p_hidden3 = torch.relu(torch.matmul(p_hidden4, self.weights_h4h3) + self.biases_h4h3.repeat(p_hidden4.size(0), 1))
+        p_hidden3 = torch.relu(torch.matmul(z_prime, self.weights_zh3) + self.biases_zh3.repeat(z_prime.size(0), 1))
         p_hidden2 = torch.matmul(p_hidden3, self.weights_h3h2) + self.biases_h3h2.repeat(p_hidden3.size(0), 1)
         p_hidden1 = torch.relu(torch.matmul(p_hidden2, self.weights_h2h1) + self.biases_h2h1.repeat(p_hidden2.size(0), 1))
 
