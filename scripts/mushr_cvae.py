@@ -1,5 +1,5 @@
 #Nick Cerone
-#7.24.21
+#7.25.21
 
 import torch
 import torch.nn as nn
@@ -97,9 +97,13 @@ train_runs, val_runs = torch.utils.data.random_split(tot_runs, [8972, 1584])
 # initialize some variables
 batch_size = 64
 input_dim = 2 #Velocity, Wheel Angle
-hidden_dim = 4
 state_dim = 3 #X Driver, Y Driver, Z Orien Driver
-z_dim = 2
+hidden_dim1 = 8
+hidden_dim2 = 6
+hidden_dim3 = 4
+hidden_dim4 = 3
+hidden_dim5 = 2
+z_dim = 1
 
 
 
@@ -153,21 +157,37 @@ class cVAE(nn.Module):
 
         #Setting weights and biases as module parameters()
         #Encoder
-        self.weights_xh = xav_init(input_dim + state_dim, hidden_dim)
-        self.weights_hZmu = xav_init(hidden_dim, z_dim)
-        self.weights_hZsig = xav_init(hidden_dim, z_dim)
+        self.weights_xh1 = xav_init(input_dim + state_dim, hidden_dim1)
+        self.weights_h1h2 = xav_init(hidden_dim1, hidden_dim2)
+        self.weights_h2h3 = xav_init(hidden_dim2, hidden_dim3)
+        self.weights_h3h4 = xav_init(hidden_dim3, hidden_dim4)
+        self.weights_h4h5 = xav_init(hidden_dim4, hidden_dim5)
+        self.weights_h5Zmu = xav_init(hidden_dim5, z_dim)
+        self.weights_h5Zsig = xav_init(hidden_dim5, z_dim)
 
-        self.biases_xh = Parameter(torch.zeros(hidden_dim), requires_grad=True)
-        self.biases_hZmu = Parameter(torch.zeros(z_dim), requires_grad=True)
-        self.biases_hZsig = Parameter(torch.zeros(z_dim), requires_grad=True)
+        self.biases_xh1 = Parameter(torch.zeros(hidden_dim1), requires_grad=True)
+        self.biases_h1h2 = Parameter(torch.zeros(hidden_dim2), requires_grad=True)
+        self.biases_h2h3 = Parameter(torch.zeros(hidden_dim3), requires_grad=True)
+        self.biases_h3h4 = Parameter(torch.zeros(hidden_dim4), requires_grad=True)
+        self.biases_h4h5 = Parameter(torch.zeros(hidden_dim5), requires_grad=True)
+        self.biases_h5Zmu = Parameter(torch.zeros(z_dim), requires_grad=True)
+        self.biases_h5Zsig = Parameter(torch.zeros(z_dim), requires_grad=True)
 
 
         #Decoder
-        self.weights_zh = xav_init(z_dim + state_dim, hidden_dim)
-        self.weights_hxhat = xav_init(hidden_dim, input_dim)
+        self.weights_zh5 = xav_init(z_dim + state_dim, hidden_dim5)
+        self.weights_h5h4 = xav_init(hidden_dim5, hidden_dim4)
+        self.weights_h4h3 = xav_init(hidden_dim4, hidden_dim3)
+        self.weights_h3h2 = xav_init(hidden_dim3, hidden_dim2)
+        self.weights_h2h1 = xav_init(hidden_dim2, hidden_dim1)
+        self.weights_h1xhat = xav_init(hidden_dim1, input_dim)
 
-        self.biases_zh = Parameter(torch.zeros(hidden_dim), requires_grad=True)
-        self.biases_hxhat = Parameter(torch.zeros(input_dim), requires_grad=True)
+        self.biases_zh5 = Parameter(torch.zeros(hidden_dim5), requires_grad=True)
+        self.biases_h5h4 = Parameter(torch.zeros(hidden_dim4), requires_grad=True)
+        self.biases_h4h3 = Parameter(torch.zeros(hidden_dim3), requires_grad=True)
+        self.biases_h3h2 = Parameter(torch.zeros(hidden_dim2), requires_grad=True)
+        self.biases_h2h1 = Parameter(torch.zeros(hidden_dim1), requires_grad=True)
+        self.biases_h1xhat = Parameter(torch.zeros(input_dim), requires_grad=True)
 
     # =============== Constructor ================
 
@@ -179,18 +199,23 @@ class cVAE(nn.Module):
         # concatonate the two tensors over a given dimension
         X_prime = torch.cat([X, s], 1)
 
-        # @ is matrix multiplication (dot product) - can only be done if col len of first matrix is the same as row len
+        # @ is matrix multiplication (dot product) (= torch.matmul) - can only be done if col len of first matrix is the same as row len
         # of 2nd (if m1 has size n x p and n2 has size p x m, then the output matrix will have size n x m)
 
         # grab a hidden layer and relu it
-        hidden = torch.relu(X_prime @ self.weights_xh + self.biases_xh.repeat(X_prime.size(0), 1))
+        hidden1 = torch.relu(torch.matmul(X_prime, self.weights_xh1) + self.biases_xh1.repeat(X_prime.size(0), 1))
+        hidden2 = torch.matmul(hidden1, self.weights_h1h2) + self.biases_h1h2.repeat(hidden1.size(0), 1)
+        hidden3 = torch.relu(torch.matmul(hidden2, self.weights_h2h3) + self.biases_h2h3.repeat(hidden2.size(0), 1))
+        hidden4 = torch.matmul(hidden3, self.weights_h3h4) + self.biases_h3h4.repeat(hidden3.size(0), 1)
+        hidden5 = torch.relu(torch.matmul(hidden4, self.weights_h4h5) + self.biases_h4h5.repeat(hidden4.size(0), 1))
+
 
         # each row in biases should be the same, so to make it a 2D matrix we just copy it vertically batch_size times
         # we can't just initialize biases as 2D because when backpropping, different rows would get different bias vals
 
         # grab tensors containing our mean and variance of the input data by reducing the size and taking the dot product
-        Zmu = hidden @ self.weights_hZmu + self.biases_hZmu.repeat(hidden.size(0), 1)
-        Zsig = hidden @ self.weights_hZsig + self.biases_hZsig.repeat(hidden.size(0), 1)
+        Zmu = torch.matmul(hidden5, self.weights_h5Zmu) + self.biases_h5Zmu.repeat(hidden5.size(0), 1)
+        Zsig = torch.matmul(hidden5, self.weights_h5Zsig) + self.biases_h5Zsig.repeat(hidden5.size(0), 1)
 
         mus.append(Zmu)
         sigs.append(Zsig)
@@ -221,9 +246,14 @@ class cVAE(nn.Module):
         z_prime = torch.cat([z, s], 1)
 
         # do more dot products to reconstruct the matrix now
-        p_hidden = torch.relu(z_prime @ self.weights_zh + self.biases_zh.repeat(z_prime.size(0), 1))
+        p_hidden5 = torch.relu(torch.matmul(z_prime, self.weights_zh5) + self.biases_zh5.repeat(z_prime.size(0), 1))
+        p_hidden4 = torch.matmul(p_hidden5, self.weights_h5h4) + self.biases_h5h4.repeat(p_hidden5.size(0), 1)
+        p_hidden3 = torch.relu(torch.matmul(p_hidden4, self.weights_h4h3) + self.biases_h4h3.repeat(p_hidden4.size(0), 1))
+        p_hidden2 = torch.matmul(p_hidden3, self.weights_h3h2) + self.biases_h3h2.repeat(p_hidden3.size(0), 1)
+        p_hidden1 = torch.relu(torch.matmul(p_hidden2, self.weights_h2h1) + self.biases_h2h1.repeat(p_hidden2.size(0), 1))
 
-        X_hat = torch.sigmoid(p_hidden @ self.weights_hxhat + self.biases_hxhat.repeat(p_hidden.size(0), 1))
+
+        X_hat = torch.sigmoid(torch.matmul(p_hidden1, self.weights_h1xhat) + self.biases_h1xhat.repeat(p_hidden1.size(0), 1))
 
         return X_hat
 
@@ -406,7 +436,7 @@ best_losses = []
 
 
 #how many times do we want to iterate through the whole dataset
-num_epochs = 1000
+num_epochs = 300
 
 
 #train over many epochs and save the best models
