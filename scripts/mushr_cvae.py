@@ -98,11 +98,11 @@ train_runs, val_runs = torch.utils.data.random_split(tot_runs, [8972, 1584])
 batch_size = 64
 input_dim = 2 #Velocity, Wheel Angle
 state_dim = 3 #X Driver, Y Driver, Z Orien Driver
-hidden_dim1 = 8
-hidden_dim2 = 6
+hidden_dim1 = 4
+hidden_dim2 = 4
 hidden_dim3 = 4
-hidden_dim4 = 3
-hidden_dim5 = 2
+hidden_dim4 = 4
+hidden_dim5 = 4
 z_dim = 1
 
 
