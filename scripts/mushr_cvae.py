@@ -1,5 +1,5 @@
 #Nick Cerone
-#7.25.21
+#7.26.21
 
 import torch
 import torch.nn as nn
@@ -98,10 +98,10 @@ train_runs, val_runs = torch.utils.data.random_split(tot_runs, [8972, 1584])
 batch_size = 64
 input_dim = 2 #Velocity, Wheel Angle
 state_dim = 3 #X Driver, Y Driver, Z Orien Driver
-hidden_dim1 = 4
-hidden_dim2 = 3
-hidden_dim3 = 2
-z_dim = 1
+hidden_dim1 = 5
+hidden_dim2 = 4
+hidden_dim3 = 3
+z_dim = 2
 
 
 
@@ -422,7 +422,7 @@ best_losses = []
 
 
 #how many times do we want to iterate through the whole dataset
-num_epochs = 500
+num_epochs = 300
 
 
 #train over many epochs and save the best models
