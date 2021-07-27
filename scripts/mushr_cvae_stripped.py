@@ -8,6 +8,7 @@ import torch.nn.functional as fn
 from torch.autograd import Variable
 import torch.optim as optim
 import numpy as np
+import math
 
 # ======================================== SETUP AND VARS ========================================
 
@@ -33,15 +34,32 @@ def cvae_to_action(cvae):
   return ret
 
 
+#Floor function to discretize the state into the grid
+pose_step = 0.8 #estimate average variance in position
+orien_step = 0.04 #estimate average variance in orientation
+def state_discretize(state):
+    #Input State:
+    #X PF
+    #Y PF
+    #Z Orientation
+    ret = np.zeros(state.shape)
+    ret[0] = math.floor(state[0] / pose_step) #Floor function based on pose_step - accounts for negative pose values
+    ret[1] = math.floor(state[1] / pose_step)
+    ret[2] = math.floor(state[2] / (orien_step * math.pi)) #convert to radians
+
+    return ret
+
+
+
+
 
 # initialize some variables
 batch_size = 64
 input_dim = 2 #Velocity, Wheel Angle
 state_dim = 3 #X Driver, Y Driver, Z Orien Driver
-hidden_dim1 = 5
-hidden_dim2 = 4
-hidden_dim3 = 3
-z_dim = 2
+hidden_dim1 = 4
+hidden_dim2 = 3
+z_dim = 1
 
 
 
@@ -71,25 +89,21 @@ class cVAE(nn.Module):
         #Encoder
         self.weights_xh1 = xav_init(input_dim + state_dim, hidden_dim1)
         self.weights_h1h2 = xav_init(hidden_dim1, hidden_dim2)
-        self.weights_h2h3 = xav_init(hidden_dim2, hidden_dim3)
-        self.weights_h3Zmu = xav_init(hidden_dim3, z_dim)
-        self.weights_h3Zsig = xav_init(hidden_dim3, z_dim)
+        self.weights_h2Zmu = xav_init(hidden_dim2, z_dim)
+        self.weights_h2Zsig = xav_init(hidden_dim2, z_dim)
 
         self.biases_xh1 = Parameter(torch.zeros(hidden_dim1), requires_grad=True)
         self.biases_h1h2 = Parameter(torch.zeros(hidden_dim2), requires_grad=True)
-        self.biases_h2h3 = Parameter(torch.zeros(hidden_dim3), requires_grad=True)
-        self.biases_h3Zmu = Parameter(torch.zeros(z_dim), requires_grad=True)
-        self.biases_h3Zsig = Parameter(torch.zeros(z_dim), requires_grad=True)
+        self.biases_h2Zmu = Parameter(torch.zeros(z_dim), requires_grad=True)
+        self.biases_h2Zsig = Parameter(torch.zeros(z_dim), requires_grad=True)
 
 
         #Decoder
-        self.weights_zh3 = xav_init(z_dim + state_dim, hidden_dim3)
-        self.weights_h3h2 = xav_init(hidden_dim3, hidden_dim2)
+        self.weights_zh2 = xav_init(z_dim + state_dim, hidden_dim2)
         self.weights_h2h1 = xav_init(hidden_dim2, hidden_dim1)
         self.weights_h1xhat = xav_init(hidden_dim1, input_dim)
 
-        self.biases_zh3 = Parameter(torch.zeros(hidden_dim3), requires_grad=True)
-        self.biases_h3h2 = Parameter(torch.zeros(hidden_dim2), requires_grad=True)
+        self.biases_zh2 = Parameter(torch.zeros(hidden_dim2), requires_grad=True)
         self.biases_h2h1 = Parameter(torch.zeros(hidden_dim1), requires_grad=True)
         self.biases_h1xhat = Parameter(torch.zeros(input_dim), requires_grad=True)
 
@@ -108,8 +122,7 @@ class cVAE(nn.Module):
         z_prime = torch.cat([z, s], 1)
 
         # do more dot products to reconstruct the matrix now
-        p_hidden3 = torch.relu(torch.matmul(z_prime, self.weights_zh3) + self.biases_zh3.repeat(z_prime.size(0), 1))
-        p_hidden2 = torch.matmul(p_hidden3, self.weights_h3h2) + self.biases_h3h2.repeat(p_hidden3.size(0), 1)
+        p_hidden2 = torch.relu(torch.matmul(z_prime, self.weights_zh2) + self.biases_zh2.repeat(z_prime.size(0), 1))
         p_hidden1 = torch.relu(torch.matmul(p_hidden2, self.weights_h2h1) + self.biases_h2h1.repeat(p_hidden2.size(0), 1))
 
 
@@ -118,36 +131,6 @@ class cVAE(nn.Module):
         return X_hat
 
     # ================== Decoder ==================
-
-    # ============== Loss Functions ===============
-
-    # find KL divergence with mean and standard deviation of latent space
-    def kl_div(self, z_mu, z_sig):
-        # these equations both give the same thing, but kl_2 has less going on
-
-        # kl_1 = -0.5 * torch.sum(1 + torch.log(z_sig ** 2) - torch.square(z_mu) - torch.exp(torch.log(z_sig ** 2)), axis=1)
-        # kl_2 = -0.5 * torch.sum((1 + tgorch.lo(z_sig**2) - z_mu**2 - z_sig**2), axis=1)
-        kl_3 = 0.5 * torch.sum(torch.exp(z_sig) + z_mu ** 2 - 1. - z_sig, 1)
-        return torch.mean(kl_3, axis=0)
-
-    # calculate the total loss - want to minimize
-    def calc_tot_loss(self, orig, recon, z_mu, z_sig):
-        # MSE = nn.MSELoss()(recon, orig) #extra loss function to try
-
-        # binary cross entropy loss instead of MSE
-        BCE = fn.binary_cross_entropy(recon, orig, size_average=False) / batch_size
-
-        # KL Divergece
-        KL = self.kl_div(z_mu, z_sig)
-
-        # hyperparameter lambda
-        lam = 1
-
-        return BCE + lam * KL
-
-    # ============== Loss Functions ===============
-
-
 
 # ============================================= CVAE =============================================
 
