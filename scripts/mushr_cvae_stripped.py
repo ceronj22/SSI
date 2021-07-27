@@ -34,8 +34,26 @@ def cvae_to_action(cvae):
   return ret
 
 
+
+
+grid_size = 50 #50 by 50 grid, and 50 wedges coincidentally (2pi / 0.04pi = 50)
+def to_one_hot(state):
+    ret = np.zeros(grid_size*3)
+
+    #set the x (half are negative, some number within 0 and 50)
+    ret[int(state[0] + 25)] = 1
+
+    #set the y (assumption that none are negative)
+    ret[int(state[1] + 50)] = 1
+
+    #set what wedge of the orien
+    ret[int(state[2] + 125)] = 1
+
+    return ret
+
+
 #Floor function to discretize the state into the grid
-pose_step = 0.8 #estimate average variance in position
+pose_step = 0.08 #estimate average variance in position
 orien_step = 0.04 #estimate average variance in orientation
 def state_discretize(state):
     #Input State:
@@ -47,7 +65,12 @@ def state_discretize(state):
     ret[1] = math.floor(state[1] / pose_step)
     ret[2] = math.floor(state[2] / (orien_step * math.pi)) #convert to radians
 
+    print("[{}, {}, {}]".format(ret[0], ret[1], ret[2]))
+
+    ret = to_one_hot(ret)
+
     return ret
+
 
 
 
@@ -56,10 +79,10 @@ def state_discretize(state):
 # initialize some variables
 batch_size = 64
 input_dim = 2 #Velocity, Wheel Angle
-state_dim = 3 #X Driver, Y Driver, Z Orien Driver
-hidden_dim1 = 4
-hidden_dim2 = 3
-z_dim = 1
+state_dim = 150 #X Driver, Y Driver, Z Orien Driver - to one hot --> 50, 50, 50 = 150
+hidden_dim1 = 26
+hidden_dim2 = 6
+z_dim = 2
 
 
 
