@@ -39,17 +39,17 @@ zorien_pf_avg = []
 
 
 #just a set z
-constant_z = torch.zeros(2).reshape(1, 2)
+constant_z = torch.zeros(1).reshape(1, 1)
 #if you want to alter that constant z...
-constant_z[0][0] = 0
-constant_z[0][1] = 0
+constant_z[0][0] = 0.5
+#constant_z[0][1] = 0.75
 
 #our latent values
-latent_z = torch.zeros(1).reshape(1, 1)
+latent_z = torch.zeros(2).reshape(1, 2)
 s = torch.zeros(3).reshape(1, 3)
 
 const_throttle = 1
-vel_scale = 1 #0.5
+vel_scale = 0.5
 turn_scale = 1 #0.34
 
 
@@ -81,20 +81,20 @@ def pf_callback(data):
 
 
 #scale the latent space for mapping
-latent_scale = 2.5
+latent_scale = 3
 #get joystick values
 def joy_callback(data):
     joy_states[:] = data.axes[:]
 
     joy_states[3] = (joy_states[3] - 1) * -0.5
 
-    latent_z[0][0] = joy_states[0] * latent_scale; #latent_z[0][1] = joy_states[1] * latent_scale
+    latent_z[0][0] = joy_states[0] * latent_scale; latent_z[0][1] = joy_states[1] * latent_scale
 
 
    
 def send_command(pub_controls, cvae_output):
     #cVAE output interprets negative as driving forward, but publisher does opposite --- cVAE output interprets 0.5 as centered WA, but publisher says 0.0 is centered
-    drive = AckermannDrive(speed = vel_scale * -cvae_output[0] * joy_states[3], steering_angle = turn_scale * cvae_output[1] - 0.5)
+    drive = AckermannDrive(speed = vel_scale * cvae_output[0] * joy_states[3] / -1750, steering_angle = (turn_scale * cvae_output[1] - 0.5))
     print(cvae_output)
     print(joy_states[3])
 
@@ -111,7 +111,7 @@ def timer_callback(data):
         s[0][1] = sum(y_pf_avg) / len(y_pf_avg)
         s[0][2] = sum(zorien_pf_avg) / len(zorien_pf_avg)
         
-        cvae_output = cvae_to_action(net.P(constant_z, s))
+        cvae_output = cvae_to_action(net.P(latent_z, state_discretize(s)))
         send_command(pub_controls, cvae_output)
     #else:
     #    send_command(pub_controls, None)
