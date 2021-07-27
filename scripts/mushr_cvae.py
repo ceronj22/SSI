@@ -34,8 +34,24 @@ def cvae_to_action(cvae):
   return ret
 
 
+grid_size = 50 #50 by 50 grid, and 50 wedges coincidentally (2pi / 0.04pi = 50)
+def to_one_hot(state):
+    ret = np.zeros(grid_size*3)
+
+    #set the x (half are negative, some number within 0 and 50)
+    ret[int(state[0] + 25)] = 1
+
+    #set the y (assumption that none are negative)
+    ret[int(state[1] + 50)] = 1
+
+    #set what wedge of the orien
+    ret[int(state[2] + 125)] = 1
+
+    return ret
+
+
 #Floor function to discretize the state into the grid
-pose_step = 0.8 #estimate average variance in position
+pose_step = 0.08 #estimate average variance in position
 orien_step = 0.04 #estimate average variance in orientation
 def state_discretize(state):
     #Input State:
@@ -47,7 +63,12 @@ def state_discretize(state):
     ret[1] = math.floor(state[1] / pose_step)
     ret[2] = math.floor(state[2] / (orien_step * math.pi)) #convert to radians
 
+    print("[{}, {}, {}]".format(ret[0], ret[1], ret[2]))
+
+    ret = to_one_hot(ret)
+
     return ret
+
 
 
 tot_runs = [] #our entire dataset
@@ -91,7 +112,7 @@ tot_states = daniel_runs["state"]
 #format the information for the data iterator - each row of train_runs represents one intsant - [[action], [state]]
 for i in range(len(tot_actions)):
   iact = torch.tensor(action_to_cvae(tot_actions[i]))
-  ist = torch.tensor(tot_states[i])
+  ist = torch.tensor(state_discretize(tot_states[i]))
 
   tot_runs.append([iact.type(torch.FloatTensor), ist.type(torch.FloatTensor)])
 
@@ -113,10 +134,10 @@ train_runs, val_runs = torch.utils.data.random_split(tot_runs, [8972, 1584])
 # initialize some variables
 batch_size = 64
 input_dim = 2 #Velocity, Wheel Angle
-state_dim = 3 #X Driver, Y Driver, Z Orien Driver
-hidden_dim1 = 4
-hidden_dim2 = 3
-z_dim = 1
+state_dim = 150 #X Driver, Y Driver, Z Orien Driver - to one hot --> 50, 50, 50 = 150
+hidden_dim1 = 26
+hidden_dim2 = 6
+z_dim = 2
 
 
 
@@ -430,7 +451,7 @@ best_losses = []
 
 
 #how many times do we want to iterate through the whole dataset
-num_epochs = 300
+num_epochs = 400
 
 
 #train over many epochs and save the best models
@@ -473,11 +494,15 @@ for i in range(curr_epoch, num_epochs):
 def plot_losses():
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.title("Loss Over {} Epochs".format(len(validated_losses)))
-
+    plt.title("Validation Loss Over {} Epochs".format(len(validated_losses)))
     plt.plot(range(len(best_losses)), best_losses, 'r')
     plt.plot(range(len(validated_losses)), validated_losses, 'b')
+    plt.show()
 
+    plt.xlabel("Batch")
+    plt.ylabel("Loss")
+    plt.title("Training Loss Over {} Batches".format(len(losses)))
+    plt.plot(range(len(losses)), losses, 'b')
     plt.show()
 
 plot_losses()
