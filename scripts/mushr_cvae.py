@@ -11,6 +11,7 @@ import numpy as np
 import os
 import urllib.request
 import matplotlib.pyplot as plt
+import math
 
 # ======================================== SETUP AND VARS ========================================
 
@@ -33,6 +34,21 @@ def cvae_to_action(cvae):
   return ret
 
 
+#Floor function to discretize the state into the grid
+pose_step = 0.8 #estimate average variance in position
+orien_step = 0.04 #estimate average variance in orientation
+def state_discretize(state):
+    #Input State:
+    #X PF
+    #Y PF
+    #Z Orientation
+    ret = np.zeros(state.shape)
+    ret[0] = math.floor(state[0] / pose_step) #Floor function based on pose_step - accounts for negative pose values
+    ret[1] = math.floor(state[1] / pose_step)
+    ret[2] = math.floor(state[2] / (orien_step * math.pi)) #convert to radians
+
+    return ret
+
 
 tot_runs = [] #our entire dataset
 
@@ -50,7 +66,7 @@ tot_states = nick_runs["state"]
 #format the information for the data iterator - each row of train_runs represents one intsant - [[action], [state]]
 for i in range(len(tot_actions)):
   iact = torch.tensor(action_to_cvae(tot_actions[i]))
-  ist = torch.tensor(tot_states[i])
+  ist = torch.tensor(state_discretize(tot_states[i]))
 
   tot_runs.append([iact.type(torch.FloatTensor), ist.type(torch.FloatTensor)])
 
@@ -98,10 +114,9 @@ train_runs, val_runs = torch.utils.data.random_split(tot_runs, [8972, 1584])
 batch_size = 64
 input_dim = 2 #Velocity, Wheel Angle
 state_dim = 3 #X Driver, Y Driver, Z Orien Driver
-hidden_dim1 = 5
-hidden_dim2 = 4
-hidden_dim3 = 3
-z_dim = 2
+hidden_dim1 = 4
+hidden_dim2 = 3
+z_dim = 1
 
 
 
@@ -157,25 +172,21 @@ class cVAE(nn.Module):
         #Encoder
         self.weights_xh1 = xav_init(input_dim + state_dim, hidden_dim1)
         self.weights_h1h2 = xav_init(hidden_dim1, hidden_dim2)
-        self.weights_h2h3 = xav_init(hidden_dim2, hidden_dim3)
-        self.weights_h3Zmu = xav_init(hidden_dim3, z_dim)
-        self.weights_h3Zsig = xav_init(hidden_dim3, z_dim)
+        self.weights_h2Zmu = xav_init(hidden_dim2, z_dim)
+        self.weights_h2Zsig = xav_init(hidden_dim2, z_dim)
 
         self.biases_xh1 = Parameter(torch.zeros(hidden_dim1), requires_grad=True)
         self.biases_h1h2 = Parameter(torch.zeros(hidden_dim2), requires_grad=True)
-        self.biases_h2h3 = Parameter(torch.zeros(hidden_dim3), requires_grad=True)
-        self.biases_h3Zmu = Parameter(torch.zeros(z_dim), requires_grad=True)
-        self.biases_h3Zsig = Parameter(torch.zeros(z_dim), requires_grad=True)
+        self.biases_h2Zmu = Parameter(torch.zeros(z_dim), requires_grad=True)
+        self.biases_h2Zsig = Parameter(torch.zeros(z_dim), requires_grad=True)
 
 
         #Decoder
-        self.weights_zh3 = xav_init(z_dim + state_dim, hidden_dim3)
-        self.weights_h3h2 = xav_init(hidden_dim3, hidden_dim2)
+        self.weights_zh2 = xav_init(z_dim + state_dim, hidden_dim2)
         self.weights_h2h1 = xav_init(hidden_dim2, hidden_dim1)
         self.weights_h1xhat = xav_init(hidden_dim1, input_dim)
 
-        self.biases_zh3 = Parameter(torch.zeros(hidden_dim3), requires_grad=True)
-        self.biases_h3h2 = Parameter(torch.zeros(hidden_dim2), requires_grad=True)
+        self.biases_zh2 = Parameter(torch.zeros(hidden_dim2), requires_grad=True)
         self.biases_h2h1 = Parameter(torch.zeros(hidden_dim1), requires_grad=True)
         self.biases_h1xhat = Parameter(torch.zeros(input_dim), requires_grad=True)
 
@@ -195,15 +206,13 @@ class cVAE(nn.Module):
         # grab a hidden layer and relu it
         hidden1 = torch.relu(torch.matmul(X_prime, self.weights_xh1) + self.biases_xh1.repeat(X_prime.size(0), 1))
         hidden2 = torch.matmul(hidden1, self.weights_h1h2) + self.biases_h1h2.repeat(hidden1.size(0), 1)
-        hidden3 = torch.relu(torch.matmul(hidden2, self.weights_h2h3) + self.biases_h2h3.repeat(hidden2.size(0), 1))
-
 
         # each row in biases should be the same, so to make it a 2D matrix we just copy it vertically batch_size times
         # we can't just initialize biases as 2D because when backpropping, different rows would get different bias vals
 
         # grab tensors containing our mean and variance of the input data by reducing the size and taking the dot product
-        Zmu = torch.matmul(hidden3, self.weights_h3Zmu) + self.biases_h3Zmu.repeat(hidden3.size(0), 1)
-        Zsig = torch.matmul(hidden3, self.weights_h3Zsig) + self.biases_h3Zsig.repeat(hidden3.size(0), 1)
+        Zmu = torch.matmul(hidden2, self.weights_h2Zmu) + self.biases_h2Zmu.repeat(hidden2.size(0), 1)
+        Zsig = torch.matmul(hidden2, self.weights_h2Zsig) + self.biases_h2Zsig.repeat(hidden2.size(0), 1)
 
         mus.append(Zmu)
         sigs.append(Zsig)
@@ -234,8 +243,7 @@ class cVAE(nn.Module):
         z_prime = torch.cat([z, s], 1)
 
         # do more dot products to reconstruct the matrix now
-        p_hidden3 = torch.relu(torch.matmul(z_prime, self.weights_zh3) + self.biases_zh3.repeat(z_prime.size(0), 1))
-        p_hidden2 = torch.matmul(p_hidden3, self.weights_h3h2) + self.biases_h3h2.repeat(p_hidden3.size(0), 1)
+        p_hidden2 = torch.relu(torch.matmul(z_prime, self.weights_zh2) + self.biases_zh2.repeat(z_prime.size(0), 1))
         p_hidden1 = torch.relu(torch.matmul(p_hidden2, self.weights_h2h1) + self.biases_h2h1.repeat(p_hidden2.size(0), 1))
 
 
