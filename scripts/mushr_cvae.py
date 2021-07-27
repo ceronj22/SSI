@@ -1,5 +1,5 @@
 #Nick Cerone
-#7.26.21
+#7.27.21
 
 import torch
 import torch.nn as nn
@@ -59,9 +59,9 @@ def state_discretize(state):
     #Y PF
     #Z Orientation
     ret = np.zeros(state.shape)
-    ret[0] = math.floor(state[0] / pose_step) #Floor function based on pose_step - accounts for negative pose values
-    ret[1] = math.floor(state[1] / pose_step)
-    ret[2] = math.floor(state[2] / (orien_step * math.pi)) #convert to radians
+    ret[0] = math.floor(state[0] / pose_step + 0.5) #Floor function based on pose_step - accounts for negative pose values
+    ret[1] = math.floor(state[1] / pose_step + 0.5) #the + 0.5 is to center 0,0 within the 0 square (make decision making easier for model)
+    ret[2] = math.floor(state[2] / (orien_step * math.pi) + 0.5) #convert to radians
 
     print("[{}, {}, {}]".format(ret[0], ret[1], ret[2]))
 
