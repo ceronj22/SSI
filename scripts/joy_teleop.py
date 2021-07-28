@@ -45,7 +45,7 @@ constant_z[0][0] = 0.5
 #constant_z[0][1] = 0.75
 
 #our latent values
-latent_z = torch.zeros(2).reshape(1, 2)
+latent_z = torch.zeros(1).reshape(1, 1)
 s = torch.zeros(3).reshape(1, 3)
 
 const_throttle = 1
@@ -88,13 +88,13 @@ def joy_callback(data):
 
     joy_states[3] = (joy_states[3] - 1) * -0.5
 
-    latent_z[0][0] = joy_states[0] * latent_scale; latent_z[0][1] = joy_states[1] * latent_scale
+    latent_z[0][0] = joy_states[0] * latent_scale;# latent_z[0][1] = joy_states[1] * latent_scale
 
 
    
 def send_command(pub_controls, cvae_output):
     #cVAE output interprets negative as driving forward, but publisher does opposite --- cVAE output interprets 0.5 as centered WA, but publisher says 0.0 is centered
-    drive = AckermannDrive(speed = vel_scale * cvae_output[0] * joy_states[3] / -1750, steering_angle = (turn_scale * cvae_output[1] - 0.5))
+    drive = AckermannDrive(speed = vel_scale * joy_states[3], steering_angle = (turn_scale * cvae_output[0] - 0.5))
     print(cvae_output)
     print(joy_states[3])
 
