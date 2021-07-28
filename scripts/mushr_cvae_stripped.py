@@ -18,8 +18,8 @@ def action_to_cvae(action):
   # Column 0: Velocity, --[-3250, 3250]-- #EDIT: [-1750, 0]
   # Column 1: Steering Angle, [.15, .85]
   ret = np.zeros(action.shape)
-  ret[0] = action[0] / -1750.0
-  ret[1] = (action[1] - 0.15) / 0.7
+  #ret[0] = action[0] / -1750.0
+  ret[0] = (action[0] - 0.15) / 0.7
   return ret
 
 
@@ -29,8 +29,8 @@ def cvae_to_action(cvae):
   cvae = cvae.detach().numpy().flatten()
 
   ret = np.zeros(cvae.shape)
-  ret[0] = cvae[0] * -1750.0
-  ret[1] = (cvae[1] * 0.7) + 0.15
+  #ret[0] = cvae[0] * -1750.0
+  ret[0] = (cvae[0] * 0.7) + 0.15
   return ret
 
 
@@ -73,11 +73,11 @@ def state_discretize(state):
 
 # initialize some variables
 batch_size = 64
-input_dim = 2 #Velocity, Wheel Angle
+input_dim = 1 #Velocity, Wheel Angle
 state_dim = 150 #X Driver, Y Driver, Z Orien Driver - to one hot --> 50, 50, 50 = 150
-hidden_dim1 = 26
-hidden_dim2 = 6
-z_dim = 2
+hidden_dim1 = 100
+hidden_dim2 = 20
+z_dim = 1
 
 
 
