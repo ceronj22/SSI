@@ -7,6 +7,7 @@ import rospy
 from geometry_msgs.msg import (
     Point,
     Pose,
+    PoseStamped,
     PoseWithCovariance,
     PoseWithCovarianceStamped,
     Quaternion,
@@ -30,10 +31,10 @@ def send_goal_pose(pub_goal_pose, goal):
     q = Quaternion(*quaternion_from_euler(0, 0, theta))
     point = Point(x=x, y=y)
     #create a PoseWithCovariance object to publish containing point x,y and orientation q(theta)
-    pose = PoseWithCovariance(pose=Pose(position=point, orientation=q))
+    pose = PoseStamped(pose=Pose(position=point, orientation=q))
     
     #publish to the pub_goal_pose topic at /move_base_simple/goal
-    pub_goal_pose.publish(PoseWithCovarianceStamped(pose=pose))
+    pub_goal_pose.publish(pose)
 
     
 
@@ -62,7 +63,7 @@ if __name__ == "__main__":
     print("Running Shared Autonomy Goal Pose Publisher!")
     
     goal_pose_topic = rospy.get_param("~goal_pose_topic", "/move_base_simple/goal")
-    pub_goal_pose = rospy.Publisher(goal_pose_topic, PoseWithCovarianceStamped, queue_size=1)
+    pub_goal_pose = rospy.Publisher(goal_pose_topic, PoseStamped, queue_size=1)
 
     publisher()
     
