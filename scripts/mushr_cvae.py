@@ -1,5 +1,5 @@
 #Nick Cerone
-#7.27.21
+#8.5.21
 
 import torch
 import torch.nn as nn
@@ -76,8 +76,8 @@ tot_runs = [] #our entire dataset
 # === Nick Runs ===
 
 #loading the npz file we'd saved before #EDIT: ~NEW~ runs no longer have flipped runs, nor do they have values which go backwards
-urllib.request.urlretrieve("https://github.com/ceronj22/SSI/raw/main/scripts/Nick_New_Data_Collection/nick_runs_approach.npz", "nick_runs_approach.npz")
-nick_runs = np.load("nick_runs_approach.npz", allow_pickle=True)
+urllib.request.urlretrieve("https://github.com/ceronj22/SSI/raw/main/scripts/Nick_New_Data_Collection/nick_runs_new.npz", "nick_runs_new.npz")
+nick_runs = np.load("nick_runs_new.npz", allow_pickle=True)
 
 #training information - we have 11428 indices (on just nick runs)
 _, tot_actions = np.hsplit(nick_runs["action"], 2)
@@ -92,7 +92,7 @@ for i in range(len(tot_actions)):
   tot_runs.append([iact.type(torch.FloatTensor), ist.type(torch.FloatTensor)])
 
 #print(len(tot_runs)) #should be 11428 for just Nick's runs
-print("Nick Sliced Runs: {}".format(len(tot_runs))) #NEW - 3850
+print("Nick Sliced Runs: {}".format(len(tot_runs))) #NEW - 5714
 
 # === Nick Runs ===
 
@@ -101,8 +101,8 @@ print("Nick Sliced Runs: {}".format(len(tot_runs))) #NEW - 3850
 
 # === Daniel Runs ===
 
-urllib.request.urlretrieve("https://github.com/ceronj22/SSI/raw/main/scripts/Daniel_Data_Collection_new/daniel_runs_approach.npz", "daniel_runs_approach.npz")
-daniel_runs = np.load("daniel_runs_approach.npz", allow_pickle=True)
+urllib.request.urlretrieve("https://github.com/ceronj22/SSI/raw/main/scripts/Daniel_Data_Collection_new/daniel_runs_new.npz", "daniel_runs_new.npz")
+daniel_runs = np.load("daniel_runs_new.npz", allow_pickle=True)
 
 #training information - we have 11428 indices (on just nick runs)
 _, tot_actions = np.hsplit(daniel_runs["action"], 2)
@@ -117,14 +117,14 @@ for i in range(len(tot_actions)):
   tot_runs.append([iact.type(torch.FloatTensor), ist.type(torch.FloatTensor)])
 
 #print(len(tot_runs)) #should be 11428 + 9924 = 21352 for Nick's and Daniel's runs
-print("Total Sliced Runs: {}".format(len(tot_runs))) #NEW - 3255 + 3850 = 7105
+print("Total Sliced Runs: {}".format(len(tot_runs))) #NEW - 4842 + 5714 = 10556
 
 # === Daniel Runs ===
 
 
 
 #split the total runs randomly into training and validation - 85% train, 15% val
-train_runs, val_runs = torch.utils.data.random_split(tot_runs, [6039, 1066])
+train_runs, val_runs = torch.utils.data.random_split(tot_runs, [8972, 1584])
 
 
 
@@ -132,7 +132,7 @@ train_runs, val_runs = torch.utils.data.random_split(tot_runs, [6039, 1066])
 # VARIABLES, WEIGHTS, AND FUNCTIONS
 
 # initialize some variables
-batch_size = 64
+batch_size = 48
 input_dim = 1 #Velocity, Wheel Angle
 state_dim = 150 #X Driver, Y Driver, Z Orien Driver - to one hot --> 50, 50, 50 = 150
 hidden_dim1 = 100
@@ -305,9 +305,15 @@ class cVAE(nn.Module):
     # ================== Forward ==================
 
     # run one step of the encoder
-    def forward(self, X, s):
+    def forward(self, X, s, rep=None):
         Zmu, Zsig = self.Q(X, s)
-        z = self.reparameterize(Zmu, Zsig)
+
+        #either set z to the mean of all previous zs, or reparameterize to sample a random z
+        z = rep
+
+        if(rep == None):
+            z = self.reparameterize(Zmu, Zsig)
+
         X_hat = self.P(z, s)
 
         loss = self.calc_tot_loss(X, X_hat, Zmu, Zsig)
@@ -391,6 +397,10 @@ def validate():
     # number of times we want it to iterate
     batches = len(val_runs) // batch_size #1 Epoch = (3203/64 = ~50 batches)
 
+
+    #get the mean latent off of which to validate in order to reparameterize
+    mean_z = sum(latents) / len(latents)
+
     # this would all get looped quite a bit
     for i in range(batches):
 
@@ -400,7 +410,7 @@ def validate():
         s = stats.reshape(batch_size, state_dim)  # reshape the labels
 
         # run encoder and decoder using X and s and generate an X_hat
-        X_hat, loss = net.forward(X, s)
+        X_hat, loss = net.forward(X, s, rep = mean_z)
 
         print("Validation Batch: {}\tLoss: {}".format(i, loss))
         val_losses.append(float(loss)) # save it to validation losses
